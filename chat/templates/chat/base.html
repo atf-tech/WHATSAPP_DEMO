@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RM WhatsApp Console</title>
+
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+    }
+
+    .topbar {
+      height: 50px;
+      background: #075e54;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 15px;
+    }
+
+    .logout {
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="topbar">
+  <div>WhatsApp RM Console</div>
+  <a class="logout" href="/logout/">Logout</a>
+</div>
+
+{% block content %}{% endblock %}
+
+</body>
+</html>

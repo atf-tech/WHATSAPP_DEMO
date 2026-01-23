@@ -1,0 +1,74 @@
+<style>
+  .chat-header {
+    background: #ededed;
+    padding: 10px;
+    font-weight: bold;
+  }
+
+  .messages {
+    height: 65vh;
+    overflow-y: auto;
+    padding: 10px;
+    background: #e5ddd5;
+  }
+
+  .input-box {
+    background: #f0f0f0;
+    padding: 10px;
+    display: flex;
+  }
+
+  .input-box input {
+    flex: 1;
+    padding: 10px;
+    border: none;
+  }
+
+  .input-box button {
+    padding: 10px;
+    background: #25d366;
+    border: none;
+    color: white;
+  }
+</style>
+
+<div class="chat-header">
+  {{ conversation.donor.phone_number }}
+</div>
+
+<div class="messages"
+     id="messages"
+     hx-get="{% url 'messages-partial' conversation.id %}"
+     hx-trigger="load, every 2s"
+     hx-swap="innerHTML">
+</div>
+
+<form class="input-box"
+      hx-post="{% url 'send-message' conversation.id %}"
+      hx-target="#messages"
+      hx-swap="innerHTML"
+      hx-on="htmx:afterRequest:this.reset()">
+
+  {% csrf_token %}
+  <input type="text" name="text" placeholder="Type a message..." required>
+  <button type="submit">Send</button>
+</form>
+<script>
+  function scrollToBottom() {
+    const box = document.getElementById("messages");
+    if (box) {
+      box.scrollTop = box.scrollHeight;
+    }
+  }
+
+  document.body.addEventListener("htmx:afterSwap", scrollToBottom);
+</script>
+ <script>
+  const socket = new WebSocket(
+    "ws://" + window.location.host + "/ws/chat/{{ conversation.id }}/"
+  );
+
+  socket.onmessage = function(e) {
+    location.reload(); // simplest reliable way
+  };
+</script> 

@@ -1,0 +1,16 @@
+{% for m in messages %}
+  <div style="
+    max-width: 65%;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    background: {% if m.direction == 'out' %}#dcf8c6{% else %}#fff{% endif %};
+    margin-left: {% if m.direction == 'out' %}auto{% else %}0{% endif %};
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+  ">
+    <div>{{ m.body }}</div>
+    <div style="font-size:11px; color:#666; text-align:right;">
+      {{ m.created_at|date:"H:i" }}
+    </div>
+  </div>
+{% endfor %}
