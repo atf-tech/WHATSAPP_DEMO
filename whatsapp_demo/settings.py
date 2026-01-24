@@ -25,10 +25,12 @@ SECRET_KEY = 'django-insecure-inq&*=@d&mp3bn)0)m_3=bg67sdvs58kp9l0$9^*65x922%&to
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['stafngo.org', 'www.stafngo.org', 'localhost', '127.0.0.1']
 
-WA_PHONE_NUMBER_ID = "YOUR_PRIME_PHONE_ID"
-WA_ACCESS_TOKEN = "YOUR_LONG_LIVED_TOKEN"
+WA_PHONE_NUMBER_ID = "901923126345934"
+WA_ACCESS_TOKEN = "EAALD9TvZA3sABQl8O07Q9saJZCZCx3pHZB9PRMdEyki9556OSmjNvl0RyINppCjAhwsbphstNkh9hf6NWZAmSheZCTHVZCZAHBCriE6acXxtUEcQOQS3gvrIfVMVO9JVPhcNxxSad74yXGE0mbcMhOXhtj4OeNF7Xb1uNlhIFE8SC3F8WBZBddWjBoe3nPmYs3rE5DihmbO9f3fwqNFsygsxDSifK7Ud08lsp9SfdT9vRoZB7cPw4CvCp0VJ2S1ZBIZAnG4IJYeSquPVnaCqw1qJYZBhE"
+WABI_ID = "1585674739141785"
+
 
 # Application definition
 
@@ -130,7 +132,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'static'
+
 
 LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/chat/inbox/"
