@@ -54,10 +54,12 @@
   {{ conversation.donor.phone_number }}
 </div>
 
-<div class="messages" id="messages">
-  {% include "chat/partials/messages.html" %}
+<!-- IMPORTANT: stable container for HTMX + WS -->
+<div id="chat-container" data-conversation-id="{{ conversation.id }}">
+  <div class="messages" id="messages">
+    {% include "chat/partials/messages.html" %}
+  </div>
 </div>
-
 
 <form class="input-box"
       hx-post="{% url 'send-message' conversation.id %}"
@@ -68,45 +70,3 @@
   <input type="text" name="text" placeholder="Type a message..." required>
   <button type="submit">Send</button>
 </form>
-<script>
-  const messagesBox = document.getElementById("messages");
-
-  function scrollToBottom() {
-    messagesBox.scrollTop = messagesBox.scrollHeight;
-  }
-
-  scrollToBottom();
-
-  const socket = new WebSocket(
-    (location.protocol === "https:" ? "wss://" : "ws://") +
-    window.location.host +
-    "/ws/chat/{{ conversation.id }}/"
-  );
-
-  socket.onmessage = function (e) {
-    const data = JSON.parse(e.data);
-
-    // 🛑 safety
-    if (!data.body || !data.direction || !data.time) return;
-
-    const msg = document.createElement("div");
-    msg.classList.add("msg", data.direction);
-
-    const body = document.createElement("div");
-    body.textContent = data.body;
-
-    const time = document.createElement("div");
-    time.style.fontSize = "11px";
-    time.style.color = "#666";
-    time.style.textAlign = "right";
-
-    time.textContent = data.time;
-
-
-    msg.appendChild(body);
-    msg.appendChild(time);
-    messagesBox.appendChild(msg);
-
-    scrollToBottom();
-  };
-</script>

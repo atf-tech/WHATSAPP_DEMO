@@ -76,4 +76,53 @@
 
 </div>
 
+<!-- SINGLE, HTMX-SAFE WEBSOCKET SCRIPT -->
+<script>
+document.addEventListener("htmx:afterSwap", function (e) {
+    if (!e.target || e.target.id !== "chat-box") return;
+
+    const chatContainer = e.target.querySelector("#chat-container");
+    if (!chatContainer) return;
+
+    const conversationId = chatContainer.dataset.conversationId;
+    if (!conversationId) return;
+
+    if (window.chatSocket) {
+        window.chatSocket.close();
+    }
+
+    const protocol = location.protocol === "https:" ? "wss://" : "ws://";
+
+    window.chatSocket = new WebSocket(
+        protocol + window.location.host + "/ws/chat/" + conversationId + "/"
+    );
+
+    window.chatSocket.onmessage = function (e) {
+        const data = JSON.parse(e.data);
+        if (!data.body || !data.direction || !data.time) return;
+
+        const messagesBox = document.getElementById("messages");
+        if (!messagesBox) return;
+
+        const msg = document.createElement("div");
+        msg.classList.add("msg", data.direction);
+
+        const body = document.createElement("div");
+        body.textContent = data.body;
+
+        const time = document.createElement("div");
+        time.style.fontSize = "11px";
+        time.style.color = "#666";
+        time.style.textAlign = "right";
+        time.textContent = data.time;
+
+        msg.appendChild(body);
+        msg.appendChild(time);
+        messagesBox.appendChild(msg);
+
+        messagesBox.scrollTop = messagesBox.scrollHeight;
+    };
+});
+</script>
+
 {% endblock %}
