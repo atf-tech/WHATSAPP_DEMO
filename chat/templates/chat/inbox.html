@@ -76,53 +76,69 @@
 
 </div>
 
-<!-- SINGLE, HTMX-SAFE WEBSOCKET SCRIPT -->
 <script>
-document.addEventListener("htmx:afterSwap", function (e) {
-    if (!e.target || e.target.id !== "chat-box") return;
+(function () {
+  // 🔒 Prevent script from running multiple times
+  if (window.__chatWsInitialized) return;
+  window.__chatWsInitialized = true;
 
-    const chatContainer = e.target.querySelector("#chat-container");
-    if (!chatContainer) return;
+  let socket = null;
+  let activeConversationId = null;
 
-    const conversationId = chatContainer.dataset.conversationId;
+  function connect(conversationId) {
     if (!conversationId) return;
 
-    if (window.chatSocket) {
-        window.chatSocket.close();
+    if (socket) {
+      socket.close();
+      socket = null;
     }
 
+    activeConversationId = conversationId;
+
     const protocol = location.protocol === "https:" ? "wss://" : "ws://";
+    const wsUrl = protocol + window.location.host + "/ws/chat/" + conversationId + "/";
 
-    window.chatSocket = new WebSocket(
-        protocol + window.location.host + "/ws/chat/" + conversationId + "/"
-    );
+    socket = new WebSocket(wsUrl);
 
-    window.chatSocket.onmessage = function (e) {
-        const data = JSON.parse(e.data);
-        if (!data.body || !data.direction || !data.time) return;
+    socket.onmessage = function (e) {
+      const data = JSON.parse(e.data);
+      if (!data.body || !data.direction || !data.time) return;
 
-        const messagesBox = document.getElementById("messages");
-        if (!messagesBox) return;
+      const messagesBox = document.getElementById("messages");
+      if (!messagesBox) return;
 
-        const msg = document.createElement("div");
-        msg.classList.add("msg", data.direction);
+      const msg = document.createElement("div");
+      msg.classList.add("msg", data.direction);
 
-        const body = document.createElement("div");
-        body.textContent = data.body;
+      const body = document.createElement("div");
+      body.textContent = data.body;
 
-        const time = document.createElement("div");
-        time.style.fontSize = "11px";
-        time.style.color = "#666";
-        time.style.textAlign = "right";
-        time.textContent = data.time;
+      const time = document.createElement("div");
+      time.textContent = data.time;
+      time.style.fontSize = "11px";
+      time.style.color = "#666";
+      time.style.textAlign = "right";
 
-        msg.appendChild(body);
-        msg.appendChild(time);
-        messagesBox.appendChild(msg);
+      msg.appendChild(body);
+      msg.appendChild(time);
+      messagesBox.appendChild(msg);
 
-        messagesBox.scrollTop = messagesBox.scrollHeight;
+      messagesBox.scrollTop = messagesBox.scrollHeight;
     };
-});
+  }
+
+  document.body.addEventListener("htmx:afterSwap", function (e) {
+    if (!e.target || e.target.id !== "chat-box") return;
+
+    const container = e.target.querySelector("#chat-container");
+    if (!container) return;
+
+    const conversationId = container.dataset.conversationId;
+    if (conversationId && conversationId !== activeConversationId) {
+      connect(conversationId);
+    }
+  });
+})();
 </script>
 
 {% endblock %}
