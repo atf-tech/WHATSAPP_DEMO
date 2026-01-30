@@ -23,14 +23,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-inq&*=@d&mp3bn)0)m_3=bg67sdvs58kp9l0$9^*65x922%&to'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['stafngo.org', 'www.stafngo.org', 'localhost', '127.0.0.1']
 
 WA_PHONE_NUMBER_ID = "901923126345934"
 WA_ACCESS_TOKEN = "EAALD9TvZA3sABQhw5ry2tghEEvyOYGZC2ZAa7GZAXzNH8SxFYRGhG2qFsBEkOhmoiQxBXCiA5qbV55g74RvjpGBNFMjGRK8PbYNaq1f3IVQXDLfDp4V32HYRFnnYD4PGJeXewFrRF90L6VtMvs01tKOxp13uOjmYeyRzktZAQH2mt9JcNhKDHTUiorh43aQZDZD"
 WABI_ID = "1585674739141785"
-
+VERIFY_TOKEN="demo_verify_token"
 
 # Application definition
 
@@ -76,11 +76,24 @@ TEMPLATES = [
 
 ASGI_APPLICATION = "whatsapp_demo.asgi.application"
 
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
+
+if DEBUG:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer"
+        }
     }
-}
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [("127.0.0.1", 6379)],
+            },
+        },
+    }
+
+
 
 
 # Database

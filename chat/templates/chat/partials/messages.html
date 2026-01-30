@@ -10,7 +10,8 @@
   ">
     <div>{{ m.body }}</div>
     <div style="font-size:11px; color:#666; text-align:right;">
-      {{ m.created_at|date:"H:i" }}
+     {{ m.created_at|date:"g:i A" }}
+
     </div>
   </div>
 {% endfor %}

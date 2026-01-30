@@ -12,6 +12,24 @@
     background: #e5ddd5;
   }
 
+  .msg {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    max-width: 70%;
+    clear: both;
+  }
+
+  .msg.in {
+    background: white;
+    float: left;
+  }
+
+  .msg.out {
+    background: #dcf8c6;
+    float: right;
+  }
+
   .input-box {
     background: #f0f0f0;
     padding: 10px;
@@ -36,17 +54,14 @@
   {{ conversation.donor.phone_number }}
 </div>
 
-<div class="messages"
-     id="messages"
-     hx-get="{% url 'messages-partial' conversation.id %}"
-     hx-trigger="load, every 2s"
-     hx-swap="innerHTML">
+<div class="messages" id="messages">
+  {% include "chat/partials/messages.html" %}
 </div>
+
 
 <form class="input-box"
       hx-post="{% url 'send-message' conversation.id %}"
-      hx-target="#messages"
-      hx-swap="innerHTML"
+      hx-swap="none"
       hx-on="htmx:afterRequest:this.reset()">
 
   {% csrf_token %}
@@ -54,21 +69,44 @@
   <button type="submit">Send</button>
 </form>
 <script>
+  const messagesBox = document.getElementById("messages");
+
   function scrollToBottom() {
-    const box = document.getElementById("messages");
-    if (box) {
-      box.scrollTop = box.scrollHeight;
-    }
+    messagesBox.scrollTop = messagesBox.scrollHeight;
   }
 
-  document.body.addEventListener("htmx:afterSwap", scrollToBottom);
-</script>
- <script>
+  scrollToBottom();
+
   const socket = new WebSocket(
-    "ws://" + window.location.host + "/ws/chat/{{ conversation.id }}/"
+    (location.protocol === "https:" ? "wss://" : "ws://") +
+    window.location.host +
+    "/ws/chat/{{ conversation.id }}/"
   );
 
-  socket.onmessage = function(e) {
-    location.reload(); // simplest reliable way
+  socket.onmessage = function (e) {
+    const data = JSON.parse(e.data);
+
+    // 🛑 safety
+    if (!data.body || !data.direction || !data.time) return;
+
+    const msg = document.createElement("div");
+    msg.classList.add("msg", data.direction);
+
+    const body = document.createElement("div");
+    body.textContent = data.body;
+
+    const time = document.createElement("div");
+    time.style.fontSize = "11px";
+    time.style.color = "#666";
+    time.style.textAlign = "right";
+
+    time.textContent = data.time;
+
+
+    msg.appendChild(body);
+    msg.appendChild(time);
+    messagesBox.appendChild(msg);
+
+    scrollToBottom();
   };
-</script> 
+</script>

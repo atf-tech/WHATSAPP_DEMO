@@ -1,9 +1,15 @@
 from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import Conversation
 from django.views.decorators.http import require_POST
+from django.contrib import messages
+from django.db import transaction
+
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
+from .models import Conversation, Message
 from whatsapp.services import send_whatsapp_message
-from .models import Message
+
 
 @login_required
 def inbox(request):
@@ -21,30 +27,33 @@ def inbox(request):
 
 @login_required
 def conversation(request, convo_id):
-    rm = request.user.rm
-
     conversation = get_object_or_404(
         Conversation,
         id=convo_id,
-        rm=rm
+        rm=request.user.rm
     )
 
-    messages = conversation.messages.all()
+    messages_qs = conversation.messages.all()
 
     return render(request, "chat/conversation.html", {
         "conversation": conversation,
-        "messages": messages
+        "messages": messages_qs
     })
 
-
-
+from django.http import HttpResponse
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from django.utils import timezone
 
 
 @require_POST
 @login_required
 def send_message(request, convo_id):
+    text = (request.POST.get("text") or "").strip()
     rm = request.user.rm
-    text = request.POST.get("text")
+
+    if not text:
+        return HttpResponse(status=204)
 
     conversation = get_object_or_404(
         Conversation,
@@ -52,18 +61,37 @@ def send_message(request, convo_id):
         rm=rm
     )
 
-    send_whatsapp_message(
-        conversation.donor.phone_number,
-        text
-    )
-
-    Message.objects.create(
+    message = Message.objects.create(
         conversation=conversation,
         direction="out",
         body=text
     )
 
-    return redirect("conversation", convo_id=convo_id)
+    conversation.last_message_at = message.created_at
+    conversation.last_message_preview = text
+    conversation.save(update_fields=["last_message_at", "last_message_preview"])
+    
+    local_time = timezone.localtime(message.created_at)
+
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f"chat_{conversation.id}",
+        {
+            "type": "chat_message",
+            "message": {
+                "body": message.body,
+                "direction": "out",
+                "time": local_time.strftime("%I:%M %p"),
+
+            }
+        }
+    )
+
+    return HttpResponse(status=204)
+
+
+
 
 
 
@@ -75,8 +103,8 @@ def messages_partial(request, convo_id):
         rm=request.user.rm
     )
 
-    messages = conversation.messages.all()
+    messages_qs = conversation.messages.all()
 
     return render(request, "chat/partials/messages.html", {
-        "messages": messages
+        "messages": messages_qs
     })

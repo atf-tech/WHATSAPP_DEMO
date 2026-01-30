@@ -1,34 +1,58 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>RM Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <style>
     body {
-      font-family: Arial;
+      font-family: Arial, sans-serif;
       background: #f0f2f5;
     }
     .login-box {
-      width: 300px;
+      width: 320px;
       margin: 100px auto;
-      padding: 20px;
+      padding: 24px;
       background: #fff;
-      border-radius: 5px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h3 {
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    label {
+      font-size: 14px;
+      display: block;
+      margin-bottom: 4px;
     }
     input {
       width: 100%;
       padding: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
+      box-sizing: border-box;
     }
     button {
       width: 100%;
-      padding: 8px;
+      padding: 10px;
       background: #25d366;
       border: none;
       color: white;
       font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .msg-error {
+      color: #b00020;
+      font-size: 14px;
+      margin-bottom: 10px;
     }
   </style>
 </head>
+
 <body>
 
 <div class="login-box">
@@ -36,14 +60,36 @@
 
   {% if messages %}
     {% for msg in messages %}
-      <p style="color:red;">{{ msg }}</p>
+      <div class="msg-error">{{ msg }}</div>
     {% endfor %}
   {% endif %}
 
-  <form method="post">
+  <form method="post" action="">
     {% csrf_token %}
-    <input type="text" name="username" placeholder="Username" required>
-    <input type="password" name="password" placeholder="Password" required>
+
+    <!-- preserve next URL -->
+    {% if request.GET.next %}
+      <input type="hidden" name="next" value="{{ request.GET.next }}">
+    {% endif %}
+
+    <label for="username">Username</label>
+    <input
+      type="text"
+      id="username"
+      name="username"
+      required
+      autocomplete="username"
+    >
+
+    <label for="password">Password</label>
+    <input
+      type="password"
+      id="password"
+      name="password"
+      required
+      autocomplete="current-password"
+    >
+
     <button type="submit">Login</button>
   </form>
 </div>
