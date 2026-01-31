@@ -128,16 +128,25 @@
   }
 
   document.body.addEventListener("htmx:afterSwap", function (e) {
-    if (!e.target || e.target.id !== "chat-box") return;
+  if (!e.target || e.target.id !== "chat-box") return;
 
-    const container = e.target.querySelector("#chat-container");
-    if (!container) return;
+  const container = e.target.querySelector("#chat-container");
+  if (!container) return;
 
-    const conversationId = container.dataset.conversationId;
-    if (conversationId && conversationId !== activeConversationId) {
-      connect(conversationId);
-    }
-  });
+  const conversationId = container.dataset.conversationId;
+
+  const messagesBox = container.querySelector("#messages");
+  if (messagesBox) {
+    setTimeout(() => {
+      messagesBox.scrollTop = messagesBox.scrollHeight;
+    }, 50);
+  }
+
+  if (conversationId && conversationId !== activeConversationId) {
+    connect(conversationId);
+  }
+});
+
 })();
 </script>
 
