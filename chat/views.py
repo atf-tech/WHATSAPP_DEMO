@@ -1,3 +1,5 @@
+from django.utils import timezone
+from django.http import HttpResponse
 from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -40,11 +42,6 @@ def conversation(request, convo_id):
         "messages": messages_qs
     })
 
-from django.http import HttpResponse
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
-from django.utils import timezone
-
 
 @require_POST
 @login_required
@@ -61,6 +58,7 @@ def send_message(request, convo_id):
         rm=rm
     )
 
+    # 1️⃣ Save message
     message = Message.objects.create(
         conversation=conversation,
         direction="out",
@@ -70,10 +68,9 @@ def send_message(request, convo_id):
     conversation.last_message_at = message.created_at
     conversation.last_message_preview = text
     conversation.save(update_fields=["last_message_at", "last_message_preview"])
-    
+
+    # 2️⃣ PUSH TO UI IMMEDIATELY (NO WAIT)
     local_time = timezone.localtime(message.created_at)
-
-
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
         f"chat_{conversation.id}",
@@ -83,13 +80,20 @@ def send_message(request, convo_id):
                 "body": message.body,
                 "direction": "out",
                 "time": local_time.strftime("%I:%M %p"),
-
             }
         }
     )
 
-    return HttpResponse(status=204)
+    # 3️⃣ Send to WhatsApp LAST (can be slow, UI already updated)
+    try:
+        send_whatsapp_message(
+            to=conversation.donor.phone_number,
+            text=text
+        )
+    except Exception as e:
+        print("WhatsApp send failed:", e)
 
+    return HttpResponse(status=204)
 
 
 
