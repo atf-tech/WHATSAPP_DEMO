@@ -160,10 +160,16 @@ def webhook(request):
                 headers=headers
             ).content
 
+            mime = meta.get("mime_type", "")
+            ext = mime.split("/")[-1] if "/" in mime else "bin"
+
+            filename = f"{wa_media_id}.{ext}"
+
             path = default_storage.save(
-                f"whatsapp_media/{wa_media_id}",
+                f"whatsapp_media/{filename}",
                 ContentFile(media_content)
             )
+
 
             message = Message.objects.create(
                 conversation=conversation,
