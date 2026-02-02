@@ -2,7 +2,7 @@
   <div class="msg {{ m.direction }}"
        data-message-id="{{ m.id }}"
        style="
-        max-width: 65%;
+        max-width: 70%;
         padding: 8px 10px;
         margin-bottom: 8px;
         border-radius: 8px;
@@ -11,15 +11,25 @@
         box-shadow: 0 1px 1px rgba(0,0,0,0.1);
        ">
 
-    <div>{{ m.body }}</div>
+    {% if m.message_type == "text" %}
+      <div>{{ m.body }}</div>
+    {% elif m.message_type == "image" %}
+      <img src="{{ m.media.file.url }}"
+           style="max-width:220px;border-radius:6px;cursor:pointer"
+           onclick="window.open(this.src,'_blank')">
+    {% elif m.message_type == "video" %}
+      <video src="{{ m.media.file.url }}" controls style="max-width:240px"></video>
+    {% elif m.message_type == "audio" %}
+      <audio src="{{ m.media.file.url }}" controls style="width:220px"></audio>
+    {% else %}
+      <a href="{{ m.media.file.url }}" target="_blank">📄 Download file</a>
+    {% endif %}
 
-    <div style="font-size:11px; color:#666; text-align:right; display:flex; gap:4px; justify-content:flex-end;">
+    <div style="font-size:11px;color:#666;text-align:right;display:flex;gap:4px;justify-content:flex-end;">
       <span>{{ m.created_at|date:"g:i A" }}</span>
-
       {% if m.direction == "out" %}
         <span class="tick tick-{{ m.status }}"></span>
       {% endif %}
     </div>
-
   </div>
 {% endfor %}

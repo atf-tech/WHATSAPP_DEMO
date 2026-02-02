@@ -103,56 +103,107 @@
     socket.onmessage = function (e) {
   const data = JSON.parse(e.data);
 
- 
+  // ======================================
+  // 1️⃣ TICK STATUS UPDATE
+  // ======================================
   if (data.type === "message_status") {
     const tickEl = document.querySelector(
       `[data-message-id="${data.message_id}"] .tick`
     );
-
     if (!tickEl) return;
-
     tickEl.className = "tick tick-" + data.status;
     return;
   }
 
-  if (!data.body || !data.direction || !data.time) return;
+  // ======================================
+  // 2️⃣ NORMAL / MEDIA MESSAGE
+  // ======================================
+  if (!data.message_type || !data.direction) return;
 
   const messagesBox = document.getElementById("messages");
   if (!messagesBox) return;
 
   const msg = document.createElement("div");
   msg.classList.add("msg", data.direction);
-  msg.dataset.messageId = data.id; // 🔥 IMPORTANT
+  msg.dataset.messageId = data.id;
 
-  const body = document.createElement("div");
-  body.textContent = data.body;
+  // ==========================
+  // 3️⃣ BODY (TEXT / MEDIA)
+  // ==========================
+  if (data.message_type === "text") {
+    const body = document.createElement("div");
+    body.textContent = data.body;
+    msg.appendChild(body);
+  }
 
+  if (data.message_type === "image") {
+  const link = document.createElement("a");
+  link.href = data.file_url;
+  link.target = "_blank";
+
+  const img = document.createElement("img");
+  img.src = data.file_url;
+  img.className = "chat-image";
+
+  link.appendChild(img);
+  msg.appendChild(link);
+}
+
+
+  if (data.message_type === "audio") {
+  const audio = document.createElement("audio");
+  audio.src = data.file_url;
+  audio.controls = true;
+  msg.appendChild(audio);
+}
+
+
+  if (data.message_type === "video") {
+  const video = document.createElement("video");
+  video.src = data.file_url;
+  video.controls = true;
+  video.className = "chat-video";
+  msg.appendChild(video);
+}
+
+
+  if (data.message_type === "document") {
+  const box = document.createElement("div");
+  box.className = "doc-box";
+
+  const link = document.createElement("a");
+  link.href = data.file_url;
+  link.target = "_blank";
+  link.textContent = "📄 Download document";
+
+  box.appendChild(link);
+  msg.appendChild(box);
+}
+
+
+  // ==========================
+  // 4️⃣ META (TIME + TICK)
+  // ==========================
   const meta = document.createElement("div");
   meta.style.fontSize = "11px";
   meta.style.color = "#666";
   meta.style.textAlign = "right";
-  meta.style.display = "flex";
-  meta.style.gap = "4px";
-  meta.style.justifyContent = "flex-end";
 
   const time = document.createElement("span");
   time.textContent = data.time;
-
   meta.appendChild(time);
 
-  // 🔥 outgoing → add tick
   if (data.direction === "out") {
     const tick = document.createElement("span");
     tick.className = "tick tick-" + data.status;
     meta.appendChild(tick);
   }
 
-  msg.appendChild(body);
   msg.appendChild(meta);
   messagesBox.appendChild(msg);
-
   messagesBox.scrollTop = messagesBox.scrollHeight;
 };
+
 
   }
 

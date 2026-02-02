@@ -9,6 +9,12 @@ urlpatterns = [
         views.messages_partial,
         name="messages-partial"
     ),
+    path(
+    "send-media/<int:convo_id>/",
+    views.send_media_message,
+    name="send-media-message"
+),
+
     path("send/<int:convo_id>/", views.send_message, name="send-message"),
 
 ]

@@ -34,35 +34,75 @@
     background: #f0f0f0;
     padding: 10px;
     display: flex;
+    gap: 6px;
   }
 
-  .input-box input {
-    flex: 1;
-    padding: 10px;
+  .input-box input,
+  .input-box select {
+    padding: 8px;
     border: none;
   }
 
   .input-box button {
-    padding: 10px;
+    padding: 8px 12px;
     background: #25d366;
     border: none;
     color: white;
+    cursor: pointer;
   }
-.tick::after {
-  content: "✓";
-  font-size: 12px;
-  margin-left: 2px;
+
+  .tick::after {
+    content: "✓";
+    font-size: 12px;
+    margin-left: 2px;
+  }
+
+  .tick-delivered::after {
+    content: "✓✓";
+  }
+
+  .tick-read::after {
+    content: "✓✓";
+    color: #34b7f1;
+  }
+
+  .msg img.chat-image {
+  max-width: 220px;
+  max-height: 220px;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  cursor: pointer;
+  display: block;
 }
 
-.tick-delivered::after {
-  content: "✓✓";
+.msg video.chat-video {
+  max-width: 240px;
+  max-height: 180px;
+  border-radius: 8px;
+  background: black;
+  display: block;
 }
 
-.tick-read::after {
-  content: "✓✓";
-  color: #34b7f1; /* WhatsApp blue */
+.msg audio {
+  max-width: 240px;
+  display: block;
 }
 
+.msg .doc-box {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  max-width: 240px;
+}
+
+.msg .doc-box a {
+  text-decoration: none;
+  color: #075e54;
+  font-weight: bold;
+}
 
 </style>
 
@@ -70,13 +110,13 @@
   {{ conversation.donor.phone_number }}
 </div>
 
-<!-- IMPORTANT: stable container for HTMX + WS -->
 <div id="chat-container" data-conversation-id="{{ conversation.id }}">
   <div class="messages" id="messages">
     {% include "chat/partials/messages.html" %}
   </div>
 </div>
 
+<!-- TEXT MESSAGE FORM -->
 <form class="input-box"
       hx-post="{% url 'send-message' conversation.id %}"
       hx-swap="none"
@@ -85,4 +125,25 @@
   {% csrf_token %}
   <input type="text" name="text" placeholder="Type a message..." required>
   <button type="submit">Send</button>
+</form>
+
+<!-- MEDIA MESSAGE FORM -->
+<form class="input-box"
+      hx-post="{% url 'send-media-message' conversation.id %}"
+      hx-encoding="multipart/form-data"
+      hx-swap="none"
+      hx-on="htmx:afterRequest:this.reset()">
+
+  {% csrf_token %}
+
+  <input type="file" name="file" required>
+
+  <select name="message_type" required>
+    <option value="image">Image</option>
+    <option value="document">Document</option>
+    <option value="audio">Audio</option>
+    <option value="video">Video</option>
+  </select>
+
+  <button type="submit">Send Media</button>
 </form>
