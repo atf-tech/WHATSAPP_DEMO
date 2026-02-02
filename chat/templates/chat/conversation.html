@@ -48,6 +48,22 @@
     border: none;
     color: white;
   }
+.tick::after {
+  content: "✓";
+  font-size: 12px;
+  margin-left: 2px;
+}
+
+.tick-delivered::after {
+  content: "✓✓";
+}
+
+.tick-read::after {
+  content: "✓✓";
+  color: #34b7f1; /* WhatsApp blue */
+}
+
+
 </style>
 
 <div class="chat-header">

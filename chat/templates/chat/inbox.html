@@ -101,30 +101,59 @@
     socket = new WebSocket(wsUrl);
 
     socket.onmessage = function (e) {
-      const data = JSON.parse(e.data);
-      if (!data.body || !data.direction || !data.time) return;
+  const data = JSON.parse(e.data);
 
-      const messagesBox = document.getElementById("messages");
-      if (!messagesBox) return;
+ 
+  if (data.type === "message_status") {
+    const tickEl = document.querySelector(
+      `[data-message-id="${data.message_id}"] .tick`
+    );
 
-      const msg = document.createElement("div");
-      msg.classList.add("msg", data.direction);
+    if (!tickEl) return;
 
-      const body = document.createElement("div");
-      body.textContent = data.body;
+    tickEl.className = "tick tick-" + data.status;
+    return;
+  }
 
-      const time = document.createElement("div");
-      time.textContent = data.time;
-      time.style.fontSize = "11px";
-      time.style.color = "#666";
-      time.style.textAlign = "right";
+  if (!data.body || !data.direction || !data.time) return;
 
-      msg.appendChild(body);
-      msg.appendChild(time);
-      messagesBox.appendChild(msg);
+  const messagesBox = document.getElementById("messages");
+  if (!messagesBox) return;
 
-      messagesBox.scrollTop = messagesBox.scrollHeight;
-    };
+  const msg = document.createElement("div");
+  msg.classList.add("msg", data.direction);
+  msg.dataset.messageId = data.id; // 🔥 IMPORTANT
+
+  const body = document.createElement("div");
+  body.textContent = data.body;
+
+  const meta = document.createElement("div");
+  meta.style.fontSize = "11px";
+  meta.style.color = "#666";
+  meta.style.textAlign = "right";
+  meta.style.display = "flex";
+  meta.style.gap = "4px";
+  meta.style.justifyContent = "flex-end";
+
+  const time = document.createElement("span");
+  time.textContent = data.time;
+
+  meta.appendChild(time);
+
+  // 🔥 outgoing → add tick
+  if (data.direction === "out") {
+    const tick = document.createElement("span");
+    tick.className = "tick tick-" + data.status;
+    meta.appendChild(tick);
+  }
+
+  msg.appendChild(body);
+  msg.appendChild(meta);
+  messagesBox.appendChild(msg);
+
+  messagesBox.scrollTop = messagesBox.scrollHeight;
+};
+
   }
 
   document.body.addEventListener("htmx:afterSwap", function (e) {

@@ -44,6 +44,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps(event["message"]))
+        
+    async def message_status(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "message_status",
+            "message_id": event["message_id"],
+            "status": event["status"],
+        }))
+
 
     @database_sync_to_async
     def user_can_access(self, user, convo_id):

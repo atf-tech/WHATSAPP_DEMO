@@ -22,11 +22,9 @@ class Conversation(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # 🔥 critical for inbox + realtime
     last_message_at = models.DateTimeField(null=True, blank=True)
     last_message_preview = models.TextField(blank=True)
 
-    # 🔒 future locking support
     is_locked = models.BooleanField(default=False)
 
     def __str__(self):
@@ -38,6 +36,21 @@ class Message(models.Model):
         ("delivered", "Delivered"),
         ("read", "Read"),
     ]
+    
+    MESSAGE_TYPE_CHOICES = [
+        ("text", "Text"),
+        ("image", "Image"),
+        ("video", "Video"),
+        ("audio", "Audio"),
+        ("document", "Document"),
+    ]
+
+    message_type = models.CharField(
+        max_length=10,
+        choices=MESSAGE_TYPE_CHOICES,
+        default="text"
+    )
+
 
     conversation = models.ForeignKey(
         Conversation,
@@ -69,3 +82,25 @@ class Message(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+
+
+
+class MessageMedia(models.Model):
+    message = models.OneToOneField(
+        Message,
+        related_name="media",
+        on_delete=models.CASCADE
+    )
+
+    file = models.FileField(upload_to="whatsapp_media/")
+    mime_type = models.CharField(max_length=100)
+    size = models.PositiveIntegerField()
+
+    # WhatsApp Cloud media id
+    wa_media_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)

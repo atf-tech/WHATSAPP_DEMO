@@ -1,5 +1,3 @@
-from django.utils import timezone
-from django.http import HttpResponse
 from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -41,6 +39,17 @@ def conversation(request, convo_id):
         "conversation": conversation,
         "messages": messages_qs
     })
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
+from whatsapp.services import send_whatsapp_message
+from chat.models import Conversation, Message
 
 
 @require_POST
@@ -58,18 +67,21 @@ def send_message(request, convo_id):
         rm=rm
     )
 
-    # 1️⃣ Save message
+    # 1️⃣ Create message (SINGLE TICK)
     message = Message.objects.create(
         conversation=conversation,
         direction="out",
-        body=text
+        body=text,
+        status="sent",
+        message_type="text"
     )
 
+    # update conversation preview
     conversation.last_message_at = message.created_at
     conversation.last_message_preview = text
     conversation.save(update_fields=["last_message_at", "last_message_preview"])
 
-    # 2️⃣ PUSH TO UI IMMEDIATELY (NO WAIT)
+    # 2️⃣ Realtime UI update (DO NOT WAIT FOR WHATSAPP)
     local_time = timezone.localtime(message.created_at)
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
@@ -77,24 +89,31 @@ def send_message(request, convo_id):
         {
             "type": "chat_message",
             "message": {
+                "id": message.id,
                 "body": message.body,
                 "direction": "out",
+                "status": message.status,   # sent
                 "time": local_time.strftime("%I:%M %p"),
             }
         }
     )
 
-    # 3️⃣ Send to WhatsApp LAST (can be slow, UI already updated)
+    # 3️⃣ Send to WhatsApp + save external_id
     try:
-        send_whatsapp_message(
+        response = send_whatsapp_message(
             to=conversation.donor.phone_number,
             text=text
         )
+
+        wa_id = response["messages"][0]["id"]
+        message.external_id = wa_id
+        message.save(update_fields=["external_id"])
+
     except Exception as e:
+        # IMPORTANT: never break UI
         print("WhatsApp send failed:", e)
 
     return HttpResponse(status=204)
-
 
 
 
