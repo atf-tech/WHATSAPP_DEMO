@@ -38,29 +38,32 @@ def verify_signature(request):
 @csrf_exempt
 def webhook(request):
 
+    # -------------------------------------------------
+    # Verification
+    # -------------------------------------------------
     if request.method == "GET":
         if request.GET.get("hub.verify_token") == VERIFY_TOKEN:
             return HttpResponse(request.GET.get("hub.challenge"))
         return HttpResponse(status=403)
 
     if request.method != "POST":
-        return HttpResponse(status=405)
+        return HttpResponse(status=200)
 
     if not verify_signature(request):
         return HttpResponse(status=403)
 
-    payload = json.loads(request.body)
-
     try:
+        payload = json.loads(request.body)
         value = payload["entry"][0]["changes"][0]["value"]
-    except (KeyError, IndexError):
+    except Exception:
         return JsonResponse({"status": "ignored"})
 
     channel_layer = get_channel_layer()
 
-    statuses = value.get("statuses", [])
-
-    for status_obj in statuses:
+    # -------------------------------------------------
+    # STATUS UPDATES (ticks)
+    # -------------------------------------------------
+    for status_obj in value.get("statuses", []):
         wa_id = status_obj.get("id")
         wa_status = status_obj.get("status")
 
@@ -90,8 +93,10 @@ def webhook(request):
             }
         )
 
+    # -------------------------------------------------
+    # INCOMING MESSAGE
+    # -------------------------------------------------
     messages = value.get("messages", [])
-
     if not messages:
         return JsonResponse({"status": "ok"})
 
@@ -109,9 +114,7 @@ def webhook(request):
 
     with transaction.atomic():
 
-        donor, _ = Donor.objects.get_or_create(
-            phone_number=donor_number
-        )
+        donor, _ = Donor.objects.get_or_create(phone_number=donor_number)
 
         conversation = Conversation.objects.select_for_update().filter(
             donor=donor,
@@ -120,13 +123,11 @@ def webhook(request):
 
         if not conversation:
             rm = RM.objects.filter(is_active=True).order_by("last_assigned_at").first()
-            conversation = Conversation.objects.create(
-                donor=donor,
-                rm=rm
-            )
+            conversation = Conversation.objects.create(donor=donor, rm=rm)
             rm.last_assigned_at = conversation.created_at
             rm.save(update_fields=["last_assigned_at"])
 
+        # ---------------- TEXT ----------------
         if msg_type == "text":
             body = msg.get("text", {}).get("body", "")
 
@@ -139,6 +140,7 @@ def webhook(request):
                 external_id=msg_id
             )
 
+        # ---------------- MEDIA ----------------
         else:
             media_info = msg.get(msg_type, {})
             wa_media_id = media_info.get("id")
@@ -150,26 +152,34 @@ def webhook(request):
                 "Authorization": f"Bearer {settings.WA_ACCESS_TOKEN}"
             }
 
-            meta = requests.get(
+            meta_resp = requests.get(
                 f"https://graph.facebook.com/v18.0/{wa_media_id}",
-                headers=headers
-            ).json()
+                headers=headers,
+                timeout=10
+            )
 
-            media_content = requests.get(
-                meta["url"],
-                headers=headers
-            ).content
+            if meta_resp.status_code != 200:
+                return JsonResponse({"status": "media_meta_failed"})
+
+            meta = meta_resp.json()
+
+            media_resp = requests.get(
+                meta.get("url"),
+                headers=headers,
+                timeout=20
+            )
+
+            if media_resp.status_code != 200:
+                return JsonResponse({"status": "media_download_failed"})
 
             mime = meta.get("mime_type", "")
             ext = mime.split("/")[-1] if "/" in mime else "bin"
-
             filename = f"{wa_media_id}.{ext}"
 
             path = default_storage.save(
                 f"whatsapp_media/{filename}",
-                ContentFile(media_content)
+                ContentFile(media_resp.content)
             )
-
 
             message = Message.objects.create(
                 conversation=conversation,
@@ -182,14 +192,17 @@ def webhook(request):
             MessageMedia.objects.create(
                 message=message,
                 file=path,
-                mime_type=meta.get("mime_type"),
-                size=len(media_content),
+                mime_type=mime,
+                size=len(media_resp.content),
                 wa_media_id=wa_media_id
             )
 
+    # -------------------------------------------------
+    # REALTIME PUSH
+    # -------------------------------------------------
     local_time = timezone.localtime(message.created_at)
 
-    payload = {
+    ws_payload = {
         "id": message.id,
         "direction": "in",
         "message_type": message.message_type,
@@ -198,15 +211,15 @@ def webhook(request):
     }
 
     if message.message_type == "text":
-        payload["body"] = message.body
+        ws_payload["body"] = message.body
     else:
-        payload["file_url"] = message.media.file.url
+        ws_payload["file_url"] = message.media.file.url
 
     async_to_sync(channel_layer.group_send)(
         f"chat_{conversation.id}",
         {
             "type": "chat_message",
-            "message": payload
+            "message": ws_payload
         }
     )
 

@@ -25,11 +25,40 @@
       <a href="{{ m.media.file.url }}" target="_blank">📄 Download file</a>
     {% endif %}
 
+    <!-- Reaction display (hidden if no reaction) -->
+<div class="reaction-bar"
+     data-message-id="{{ m.id }}"
+     style="
+       font-size:14px;
+       margin-top:4px;
+       display:{% if m.reactions.first %}inline-flex{% else %}none{% endif %};
+       gap:4px;
+     ">
+  {% if m.reactions.first %}
+    <span>{{ m.reactions.first.emoji }}</span>
+  {% endif %}
+</div>
+
+<!-- Reaction trigger (arrow) -->
+<button class="reaction-trigger"
+        data-message-id="{{ m.id }}"
+        style="
+          background:none;
+          border:none;
+          cursor:pointer;
+          font-size:12px;
+          opacity:0.6;
+        ">
+  ⌄
+</button>
+
+
     <div style="font-size:11px;color:#666;text-align:right;display:flex;gap:4px;justify-content:flex-end;">
       <span>{{ m.created_at|date:"g:i A" }}</span>
       {% if m.direction == "out" %}
         <span class="tick tick-{{ m.status }}"></span>
       {% endif %}
     </div>
+
   </div>
 {% endfor %}

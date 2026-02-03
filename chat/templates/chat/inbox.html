@@ -103,9 +103,24 @@
     socket.onmessage = function (e) {
   const data = JSON.parse(e.data);
 
-  // ======================================
-  // 1️⃣ TICK STATUS UPDATE
-  // ======================================
+  // 🔥 REACTION FIRST
+  if (data.type === "reaction") {
+    const bar = document.querySelector(
+      `.reaction-bar[data-message-id="${data.message_id}"]`
+    );
+    if (!bar) return;
+
+    if (data.action === "remove") {
+      bar.style.display = "none";
+      bar.innerHTML = "";
+    } else {
+      bar.style.display = "inline-flex";
+      bar.innerHTML = `<span>${data.emoji}</span>`;
+    }
+    return;
+  }
+
+
   if (data.type === "message_status") {
     const tickEl = document.querySelector(
       `[data-message-id="${data.message_id}"] .tick`
@@ -115,9 +130,7 @@
     return;
   }
 
-  // ======================================
-  // 2️⃣ NORMAL / MEDIA MESSAGE
-  // ======================================
+ 
   if (!data.message_type || !data.direction) return;
 
   const messagesBox = document.getElementById("messages");
@@ -127,14 +140,15 @@
   msg.classList.add("msg", data.direction);
   msg.dataset.messageId = data.id;
 
-  // ==========================
-  // 3️⃣ BODY (TEXT / MEDIA)
-  // ==========================
+
   if (data.message_type === "text") {
     const body = document.createElement("div");
     body.textContent = data.body;
     msg.appendChild(body);
   }
+
+
+
 
   if (data.message_type === "image") {
   const link = document.createElement("a");
@@ -179,6 +193,28 @@
   box.appendChild(link);
   msg.appendChild(box);
 }
+
+// 🔥 Reaction bar (initially hidden)
+const reactionBar = document.createElement("div");
+reactionBar.className = "reaction-bar";
+reactionBar.dataset.messageId = data.id;
+reactionBar.style.display = "none";
+reactionBar.style.fontSize = "14px";
+reactionBar.style.marginTop = "4px";
+msg.appendChild(reactionBar);
+
+// 🔥 Reaction trigger
+const trigger = document.createElement("button");
+trigger.className = "reaction-trigger";
+trigger.dataset.messageId = data.id;
+trigger.textContent = "⌄";
+trigger.style.background = "none";
+trigger.style.border = "none";
+trigger.style.cursor = "pointer";
+trigger.style.fontSize = "12px";
+trigger.style.opacity = "0.6";
+msg.appendChild(trigger);
+
 
 
   // ==========================

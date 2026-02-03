@@ -67,72 +67,114 @@
   }
 
   .msg img.chat-image {
-  max-width: 220px;
-  max-height: 220px;
-  width: auto;
-  height: auto;
-  border-radius: 8px;
-  cursor: pointer;
-  display: block;
-}
+    max-width: 220px;
+    max-height: 220px;
+    width: auto;
+    height: auto;
+    border-radius: 8px;
+    cursor: pointer;
+    display: block;
+  }
 
-.msg video.chat-video {
-  max-width: 240px;
-  max-height: 180px;
-  border-radius: 8px;
-  background: black;
-  display: block;
-}
+  .msg video.chat-video {
+    max-width: 240px;
+    max-height: 180px;
+    border-radius: 8px;
+    background: black;
+    display: block;
+  }
 
-.msg audio {
-  max-width: 240px;
-  display: block;
-}
+  .msg audio {
+    max-width: 240px;
+    display: block;
+  }
 
-.msg .doc-box {
-  background: #fff;
-  border: 1px solid #ddd;
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-size: 14px;
-  max-width: 240px;
-}
+  .msg .doc-box {
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 14px;
+    max-width: 240px;
+  }
 
-.msg .doc-box a {
-  text-decoration: none;
-  color: #075e54;
-  font-weight: bold;
-}
-
+  .msg .doc-box a {
+    text-decoration: none;
+    color: #075e54;
+    font-weight: bold;
+  }
 </style>
-
 <div class="chat-header">
   {{ conversation.donor.phone_number }}
 </div>
 
-<div id="chat-container" data-conversation-id="{{ conversation.id }}">
+<div id="chat-container"
+     data-conversation-id="{{ conversation.id }}"
+     style="position: relative;">
+
+  <!-- MESSAGES -->
   <div class="messages" id="messages">
     {% include "chat/partials/messages.html" %}
   </div>
+
+  <div id="reaction-picker"
+     style="
+       display:none;
+       position:fixed;
+       background:white;
+       border:1px solid #ccc;
+       padding:6px;
+       border-radius:6px;
+       box-shadow:0 2px 6px rgba(0,0,0,.2);
+       z-index:2000;
+     ">
+    
+  </div>
+
+
+  <!-- EMOJI PICKER (TEXT INPUT) -->
+  <div id="emoji-picker"
+       style="
+         display:none;
+         position:absolute;
+         bottom:70px;
+         left:10px;
+         background:white;
+         border:1px solid #ccc;
+         padding:10px;
+         border-radius:8px;
+         z-index:1000;
+         max-width:300px;
+         box-shadow:0 4px 10px rgba(0,0,0,.15);
+       ">
+  </div>
+
 </div>
 
+
+
 <!-- TEXT MESSAGE FORM -->
-<form class="input-box"
-      hx-post="{% url 'send-message' conversation.id %}"
-      hx-swap="none"
-      hx-on="htmx:afterRequest:this.reset()">
+<form class="input-box" hx-post="{% url 'send-message' conversation.id %}" hx-swap="none"
+  hx-on="htmx:beforeRequest:this.reset()" style="position:relative;">
 
   {% csrf_token %}
-  <input type="text" name="text" placeholder="Type a message..." required>
+
+  <button type="button" onclick="toggleEmojiPicker()"
+    style="font-size:20px;background:none;border:none;cursor:pointer;">
+    😊
+  </button>
+
+  <input type="text" id="text-input" name="text" placeholder="Type a message..." required style="flex:1;">
+
   <button type="submit">Send</button>
 </form>
 
+
+
+
 <!-- MEDIA MESSAGE FORM -->
-<form class="input-box"
-      hx-post="{% url 'send-media-message' conversation.id %}"
-      hx-encoding="multipart/form-data"
-      hx-swap="none"
-      hx-on="htmx:afterRequest:this.reset()">
+<form class="input-box" hx-post="{% url 'send-media-message' conversation.id %}" hx-encoding="multipart/form-data"
+  hx-swap="none" hx-on="htmx:afterRequest:this.reset()">
 
   {% csrf_token %}
 
@@ -147,3 +189,98 @@
 
   <button type="submit">Send Media</button>
 </form>
+
+
+<script>
+  const EMOJIS = [
+    "😀", "😁", "😂", "🤣", "😊", "😍", "😘", "😎", "🤔", "😢",
+    "😭", "😡", "👍", "👎", "🙏", "👏", "🔥", "❤️", "🎉", "👌",
+    "🙌", "🤝", "🥳", "😴", "🤯"
+  ];
+
+  function toggleEmojiPicker() {
+    const picker = document.getElementById("emoji-picker");
+    const input = document.getElementById("text-input");
+    if (!picker || !input) return;
+
+    // Populate ONCE
+    if (!picker.dataset.ready) {
+      picker.innerHTML = "";
+      EMOJIS.forEach(e => {
+        const span = document.createElement("span");
+        span.textContent = e;
+        span.style.fontSize = "22px";
+        span.style.cursor = "pointer";
+        span.style.margin = "6px";
+
+        span.onclick = () => {
+          input.value += e;
+          input.focus();
+        };
+
+        picker.appendChild(span);
+      });
+      picker.dataset.ready = "1";
+    }
+
+    picker.style.display =
+      picker.style.display === "block" ? "none" : "block";
+  }
+</script>
+
+
+
+<script>
+const REACTION_EMOJIS = ["👍","❤️","😂","😮","😢","😡"];
+let activeMessageId = null;
+
+document.addEventListener("click", function (e) {
+
+  // Arrow clicked
+  if (e.target.classList.contains("reaction-trigger")) {
+    activeMessageId = e.target.dataset.messageId;
+
+    const picker = document.getElementById("reaction-picker");
+    picker.innerHTML = "";
+
+    REACTION_EMOJIS.forEach(emoji => {
+      const span = document.createElement("span");
+      span.textContent = emoji;
+      span.style.fontSize = "18px";
+      span.style.cursor = "pointer";
+      span.style.margin = "4px";
+
+      span.onclick = () => {
+        sendReaction(activeMessageId, emoji);
+        picker.style.display = "none";
+      };
+
+      picker.appendChild(span);
+    });
+
+    const rect = e.target.getBoundingClientRect();
+    picker.style.left = rect.left + "px";
+    picker.style.top = (rect.top - 40) + "px";
+    picker.style.display = "block";
+  }
+
+  // Click outside → close picker
+  else if (!e.target.closest("#reaction-picker")) {
+    const picker = document.getElementById("reaction-picker");
+    if (picker) picker.style.display = "none";
+  }
+});
+
+function sendReaction(messageId, emoji) {
+fetch(`/chat/messages/${messageId}/react/`, {
+    method: "POST",
+    credentials: "same-origin",   
+    headers: {
+      "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value,
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: `emoji=${encodeURIComponent(emoji)}`
+  });
+}
+
+</script>

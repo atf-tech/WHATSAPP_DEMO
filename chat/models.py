@@ -77,6 +77,7 @@ class Message(models.Model):
         blank=True,
         unique=True
     )
+    is_deleted = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -104,3 +105,31 @@ class MessageMedia(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+
+class MessageReaction(models.Model):
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.CASCADE,
+        related_name="reactions"
+    )
+    rm = models.ForeignKey(
+        "accounts.RM",
+        on_delete=models.CASCADE
+    )
+    emoji = models.CharField(max_length=10)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("message", "rm")
+        indexes = [
+            models.Index(fields=["message"]),
+            models.Index(fields=["rm"]),
+        ]
+
+    def __str__(self):
+        return f"{self.rm} reacted {self.emoji} on msg {self.message_id}"
+

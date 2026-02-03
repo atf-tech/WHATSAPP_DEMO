@@ -51,6 +51,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "message_id": event["message_id"],
             "status": event["status"],
         }))
+        
+    async def typing(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "typing",
+            "status": event["status"]
+        }))
+        
+    async def reaction_event(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "reaction",
+            "message_id": event["message_id"],
+            "emoji": event["emoji"],
+            "action": event["action"],
+        }))
+
+
+    
+    async def delete_message(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "delete",
+            "message_id": event["message_id"]
+        }))
+
+
+
 
 
     @database_sync_to_async
