@@ -21,6 +21,8 @@ class Conversation(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
+    unread_count = models.PositiveIntegerField(default=0)
+
 
     last_message_at = models.DateTimeField(null=True, blank=True)
     last_message_preview = models.TextField(blank=True)

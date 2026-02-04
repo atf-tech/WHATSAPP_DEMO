@@ -192,11 +192,11 @@
 
 
 <script>
-  const EMOJIS = [
-    "😀", "😁", "😂", "🤣", "😊", "😍", "😘", "😎", "🤔", "😢",
-    "😭", "😡", "👍", "👎", "🙏", "👏", "🔥", "❤️", "🎉", "👌",
-    "🙌", "🤝", "🥳", "😴", "🤯"
-  ];
+  window.EMOJIS = window.EMOJIS || [
+  "😀","😁","😂","🤣","😊","😍","😘","😎","🤔","😢",
+  "😭","😡","👍","👎","🙏","👏","🔥","❤️","🎉","👌",
+  "🙌","🤝","🥳","😴","🤯"
+];
 
   function toggleEmojiPicker() {
     const picker = document.getElementById("emoji-picker");
@@ -231,7 +231,9 @@
 
 
 <script>
-const REACTION_EMOJIS = ["👍","❤️","😂","😮","😢","😡"];
+window.REACTION_EMOJIS = window.REACTION_EMOJIS || [
+  "👍","❤️","😂","😮","😢","😡"
+];
 let activeMessageId = null;
 
 document.addEventListener("click", function (e) {

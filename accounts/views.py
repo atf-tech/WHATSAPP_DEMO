@@ -6,7 +6,6 @@ from django.urls import reverse
 
 def rm_login(request):
 
-    # Already logged in → go to inbox
     if request.user.is_authenticated:
         return redirect("/chat/inbox/")
 

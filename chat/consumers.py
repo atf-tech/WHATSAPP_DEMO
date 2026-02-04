@@ -8,56 +8,59 @@ from chat.models import Conversation
 class ChatConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
-        self.group_name = None  # ✅ IMPORTANT
-
         user = self.scope.get("user")
 
-        # 🔒 Auth check
         if not user or isinstance(user, AnonymousUser):
             await self.close(code=4001)
             return
 
         self.convo_id = self.scope["url_route"]["kwargs"]["convo_id"]
 
-        # 🔒 Permission check
+        # ✅ SAFE ORM access
+        self.rm_id = await self.get_rm_id(user)
+
         allowed = await self.user_can_access(user, self.convo_id)
         if not allowed:
             await self.close(code=4003)
             return
 
-        self.group_name = f"chat_{self.convo_id}"
-
+        # Chat group
         await self.channel_layer.group_add(
-            self.group_name,
+            f"chat_{self.convo_id}",
+            self.channel_name
+        )
+
+        # Inbox group
+        await self.channel_layer.group_add(
+            f"inbox_rm_{self.rm_id}",
             self.channel_name
         )
 
         await self.accept()
 
     async def disconnect(self, close_code):
-        # ✅ SAFE cleanup
-        if self.group_name:
-            await self.channel_layer.group_discard(
-                self.group_name,
-                self.channel_name
-            )
+        await self.channel_layer.group_discard(
+            f"chat_{self.convo_id}",
+            self.channel_name
+        )
+        await self.channel_layer.group_discard(
+            f"inbox_rm_{self.rm_id}",
+            self.channel_name
+        )
+
+    # ---------------- EVENTS ----------------
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps(event["message"]))
-        
-    async def message_status(self, event):
+
+    async def inbox_update(self, event):
         await self.send(text_data=json.dumps({
-            "type": "message_status",
-            "message_id": event["message_id"],
-            "status": event["status"],
+            "type": "inbox_update",
+            "conversation_id": event["conversation_id"],
+            "preview": event.get("preview"),
+            "unread": event.get("unread", 0),
         }))
-        
-    async def typing(self, event):
-        await self.send(text_data=json.dumps({
-            "type": "typing",
-            "status": event["status"]
-        }))
-        
+
     async def reaction_event(self, event):
         await self.send(text_data=json.dumps({
             "type": "reaction",
@@ -66,17 +69,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "action": event["action"],
         }))
 
-
-    
-    async def delete_message(self, event):
+    async def message_status(self, event):
         await self.send(text_data=json.dumps({
-            "type": "delete",
-            "message_id": event["message_id"]
+            "type": "message_status",
+            "message_id": event["message_id"],
+            "status": event["status"],
         }))
 
+    # ---------------- SAFE ORM ----------------
 
-
-
+    @database_sync_to_async
+    def get_rm_id(self, user):
+        return user.rm.id
 
     @database_sync_to_async
     def user_can_access(self, user, convo_id):

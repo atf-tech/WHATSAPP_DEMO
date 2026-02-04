@@ -196,6 +196,16 @@ def webhook(request):
                 size=len(media_resp.content),
                 wa_media_id=wa_media_id
             )
+        conversation.unread_count += 1
+        conversation.last_message_at = message.created_at
+        conversation.last_message_preview = (
+            message.body if message.message_type == "text" else "📎 Media"
+        )
+        conversation.save(update_fields=[
+            "unread_count",
+            "last_message_at",
+            "last_message_preview"
+        ])
 
     # -------------------------------------------------
     # REALTIME PUSH
@@ -222,5 +232,22 @@ def webhook(request):
             "message": ws_payload
         }
     )
+    
+    # 🔥 INBOX UPDATE (donor message)
+    async_to_sync(channel_layer.group_send)(
+        f"inbox_rm_{conversation.rm.id}",
+        {
+            "type": "inbox_update",
+            "conversation_id": conversation.id,
+            "preview": (
+                message.body
+                if message.message_type == "text"
+                else "📎 Media"
+            ),
+            "unread": conversation.unread_count,
+        }
+    )
+
+
 
     return JsonResponse({"status": "ok"})

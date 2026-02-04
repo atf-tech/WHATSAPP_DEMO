@@ -43,14 +43,30 @@ def conversation(request, convo_id):
         rm=request.user.rm
     )
 
+    # 🔥 RESET unread count
+    if conversation.unread_count > 0:
+        conversation.unread_count = 0
+        conversation.save(update_fields=["unread_count"])
+
+        # 🔥 notify inbox in realtime
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"inbox_rm_{request.user.rm.id}",
+            {
+                "type": "inbox_update",
+                "conversation_id": conversation.id,
+                "preview": conversation.last_message_preview,
+                "unread": 0,
+            }
+        )
+
+
     messages_qs = conversation.messages.all()
 
     return render(request, "chat/conversation.html", {
         "conversation": conversation,
         "messages": messages_qs
     })
-
-
 
 @require_POST
 @login_required
@@ -67,7 +83,7 @@ def send_message(request, convo_id):
         rm=rm
     )
 
-    # 1️⃣ Create message (SINGLE TICK)
+    # 1️⃣ Save message
     message = Message.objects.create(
         conversation=conversation,
         direction="out",
@@ -76,42 +92,49 @@ def send_message(request, convo_id):
         message_type="text"
     )
 
-    # update conversation preview
     conversation.last_message_at = message.created_at
     conversation.last_message_preview = text
     conversation.save(update_fields=["last_message_at", "last_message_preview"])
 
-    # 2️⃣ Realtime UI update (DO NOT WAIT FOR WHATSAPP)
     local_time = timezone.localtime(message.created_at)
     channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-    f"chat_{conversation.id}",
-    {
-        "type": "chat_message",
-        "message": {
-            "id": message.id,
-            "body": message.body,
-            "direction": "out",
-            "message_type": "text",
-            "status": message.status,
-            "time": local_time.strftime("%I:%M %p"),
-        }
-    }
-)
 
-    # 3️⃣ Send to WhatsApp + save external_id
+    # 2️⃣ 🔥 SEND CHAT MESSAGE (THIS WAS MISSING)
+    async_to_sync(channel_layer.group_send)(
+        f"chat_{conversation.id}",
+        {
+            "type": "chat_message",
+            "message": {
+                "id": message.id,
+                "body": message.body,
+                "direction": "out",
+                "message_type": "text",
+                "status": message.status,
+                "time": local_time.strftime("%I:%M %p"),
+            }
+        }
+    )
+
+    # 3️⃣ 🔥 INBOX UPDATE
+    async_to_sync(channel_layer.group_send)(
+        f"inbox_rm_{rm.id}",
+        {
+            "type": "inbox_update",
+            "conversation_id": conversation.id,
+            "preview": text,
+            "unread": conversation.unread_count,
+        }
+    )
+
+    # 4️⃣ Send to WhatsApp (non-blocking)
     try:
         response = send_whatsapp_message(
             to=conversation.donor.phone_number,
             text=text
         )
-
-        wa_id = response["messages"][0]["id"]
-        message.external_id = wa_id
+        message.external_id = response["messages"][0]["id"]
         message.save(update_fields=["external_id"])
-
     except Exception as e:
-        # IMPORTANT: never break UI
         print("WhatsApp send failed:", e)
 
     return HttpResponse(status=204)
@@ -134,7 +157,6 @@ def send_media_message(request, convo_id):
     if not uploaded or message_type not in ["image", "video", "audio", "document"]:
         return HttpResponse(status=400)
 
-    # 1️⃣ Create message
     message = Message.objects.create(
         conversation=conversation,
         direction="out",
@@ -142,7 +164,6 @@ def send_media_message(request, convo_id):
         status="sent"
     )
 
-    # 2️⃣ Save media locally
     media = MessageMedia.objects.create(
         message=message,
         file=uploaded,
@@ -150,8 +171,8 @@ def send_media_message(request, convo_id):
         size=uploaded.size
     )
 
-    # 3️⃣ Realtime UI (instant preview)
     channel_layer = get_channel_layer()
+
     async_to_sync(channel_layer.group_send)(
         f"chat_{conversation.id}",
         {
@@ -166,13 +187,22 @@ def send_media_message(request, convo_id):
         }
     )
 
-    # 4️⃣ WhatsApp upload + send
+    async_to_sync(channel_layer.group_send)(
+        f"inbox_rm_{rm.id}",
+        {
+            "type": "inbox_update",
+            "conversation_id": conversation.id,
+            "preview": "📎 Media",
+            "unread": conversation.unread_count,
+        }
+    )
+
+
     try:
         wa_media_id = upload_media_to_whatsapp(
             media.file.path,
             media.mime_type
         )
-
         media.wa_media_id = wa_media_id
         media.save(update_fields=["wa_media_id"])
 
@@ -180,17 +210,13 @@ def send_media_message(request, convo_id):
             conversation.donor.phone_number,
             wa_media_id,
             message_type
-)
-
-
+        )
         message.external_id = res["messages"][0]["id"]
         message.save(update_fields=["external_id"])
-
     except Exception as e:
         print("Media send failed:", e)
 
     return HttpResponse(status=204)
-
 
 
 

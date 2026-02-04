@@ -45,29 +45,46 @@
 
 <div class="container">
 
-  <!-- LEFT: INBOX -->
-  <div class="sidebar" id="inbox-list">
-    {% for convo in conversations %}
-      <div class="chat-item"
-           hx-get="{% url 'conversation' convo.id %}"
-           hx-target="#chat-box"
-           hx-swap="innerHTML"
-           hx-on="click:
-              document.querySelectorAll('.chat-item')
-                .forEach(i => i.classList.remove('active'));
-              this.classList.add('active');">
+<div class="sidebar" id="inbox-list">
+  {% for convo in conversations %}
+    <div class="chat-item"
+         data-conversation-id="{{ convo.id }}"
+         hx-get="{% url 'conversation' convo.id %}"
+         hx-target="#chat-box"
+         hx-swap="innerHTML"
+         hx-on="click:
+            document.querySelectorAll('.chat-item')
+              .forEach(i => i.classList.remove('active'));
+            this.classList.add('active');">
 
-        <div class="phone">{{ convo.donor.phone_number }}</div>
-
-        <div class="preview">
-          {{ convo.last_message_preview|default:"No messages yet" }}
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="phone">
+          {{ convo.donor.phone_number }}
         </div>
 
+        {% if convo.unread_count > 0 %}
+          <span class="unread-badge"
+                style="
+                  background:#25d366;
+                  color:white;
+                  font-size:12px;
+                  padding:2px 6px;
+                  border-radius:12px;">
+            {{ convo.unread_count }}
+          </span>
+        {% endif %}
       </div>
-    {% empty %}
-      <p style="padding:15px;">No conversations</p>
-    {% endfor %}
-  </div>
+
+      <div class="preview">
+        {{ convo.last_message_preview|default:"No messages yet" }}
+      </div>
+
+    </div>
+  {% empty %}
+    <p style="padding:15px;">No conversations</p>
+  {% endfor %}
+</div>
+
 
   <!-- RIGHT: CHAT -->
   <div class="chat-area" id="chat-box">
@@ -102,6 +119,53 @@
 
     socket.onmessage = function (e) {
   const data = JSON.parse(e.data);
+
+// 🔥 INBOX UPDATE (preview + unread + move to top)
+if (data.type === "inbox_update") {
+  const inbox = document.getElementById("inbox-list");
+  if (!inbox) return;
+
+  const item = inbox.querySelector(
+    `.chat-item[data-conversation-id="${data.conversation_id}"]`
+  );
+  if (!item) return;
+
+  // 1️⃣ Update preview text
+  const preview = item.querySelector(".preview");
+  if (preview && data.preview) {
+    preview.textContent = data.preview;
+  }
+
+  // 2️⃣ Handle unread badge
+  let badge = item.querySelector(".unread-badge");
+
+  if (data.unread > 0) {
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "unread-badge";
+      badge.style.cssText = `
+        background:#25d366;
+        color:white;
+        font-size:12px;
+        padding:2px 6px;
+        border-radius:12px;
+        margin-left:6px;
+        float:right;
+      `;
+      item.appendChild(badge);
+    }
+    badge.textContent = data.unread;
+    badge.style.display = "inline-block";
+  } else if (badge) {
+    badge.style.display = "none";
+  }
+
+  // 3️⃣ Move conversation to TOP
+  inbox.insertBefore(item, inbox.firstChild);
+
+  return;
+}
+
 
   // 🔥 REACTION FIRST
   if (data.type === "reaction") {
