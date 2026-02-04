@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-inq&*=@d&mp3bn)0)m_3=bg67sdvs58kp9l0$9^*65x922%&to'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['stafngo.org', 'www.stafngo.org', 'localhost', '127.0.0.1']
 
