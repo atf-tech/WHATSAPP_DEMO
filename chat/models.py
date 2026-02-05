@@ -26,7 +26,7 @@ class Conversation(models.Model):
 
     last_message_at = models.DateTimeField(null=True, blank=True)
     last_message_preview = models.TextField(blank=True)
-
+    is_active = models.BooleanField(default=False)
     is_locked = models.BooleanField(default=False)
 
     def __str__(self):

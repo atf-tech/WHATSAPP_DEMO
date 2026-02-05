@@ -23,6 +23,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not allowed:
             await self.close(code=4003)
             return
+        
+        await self.set_conversation_active(True)
 
         # Chat group
         await self.channel_layer.group_add(
@@ -47,6 +49,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             f"inbox_rm_{self.rm_id}",
             self.channel_name
         )
+        await self.set_conversation_active(False)
 
     # ---------------- EVENTS ----------------
 
@@ -88,3 +91,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             id=convo_id,
             rm__user=user
         ).exists()
+        
+        
+    @database_sync_to_async
+    def set_conversation_active(self, active):
+        Conversation.objects.filter(id=self.convo_id).update(is_active=active)
+

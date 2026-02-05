@@ -196,16 +196,20 @@ def webhook(request):
                 size=len(media_resp.content),
                 wa_media_id=wa_media_id
             )
-        conversation.unread_count += 1
         conversation.last_message_at = message.created_at
         conversation.last_message_preview = (
             message.body if message.message_type == "text" else "📎 Media"
         )
+
+        if not conversation.is_active:
+            conversation.unread_count += 1
+
         conversation.save(update_fields=[
             "unread_count",
             "last_message_at",
             "last_message_preview"
         ])
+
 
     # -------------------------------------------------
     # REALTIME PUSH
