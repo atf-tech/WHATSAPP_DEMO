@@ -112,6 +112,18 @@
      data-conversation-id="{{ conversation.id }}"
      style="position: relative;">
 
+     <div id="typing-indicator"
+     style="
+       display:none;
+       padding:6px 12px;
+       font-size:13px;
+       color:#666;
+       font-style:italic;
+     ">
+  Donor is typing…
+    </div>
+
+
   <!-- MESSAGES -->
   <div class="messages" id="messages">
     {% include "chat/partials/messages.html" %}
@@ -234,7 +246,9 @@
 window.REACTION_EMOJIS = window.REACTION_EMOJIS || [
   "👍","❤️","😂","😮","😢","😡"
 ];
-let activeMessageId = null;
+// let activeMessageId = null;
+
+window.activeMessageId = window.activeMessageId || null;
 
 document.addEventListener("click", function (e) {
 

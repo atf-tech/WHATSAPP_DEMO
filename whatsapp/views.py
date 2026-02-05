@@ -92,6 +92,30 @@ def webhook(request):
                 "status": msg.status,
             }
         )
+    
+ 
+    for status_obj in value.get("statuses", []):
+        if status_obj.get("status") == "typing":
+            donor_number = status_obj.get("from")
+
+
+            try:
+                conversation = Conversation.objects.filter(
+                    donor__phone_number=donor_number,
+                    status="open"
+                ).first()
+            except Conversation.DoesNotExist:
+                conversation = None
+
+            if conversation:
+                async_to_sync(channel_layer.group_send)(
+                    f"chat_{conversation.id}",
+                    {
+                        "type": "typing",
+                        "status": "start",
+                    }
+                )
+
 
     # -------------------------------------------------
     # INCOMING MESSAGE

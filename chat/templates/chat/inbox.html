@@ -244,6 +244,20 @@ if (data.type === "inbox_update") {
   msg.appendChild(video);
 }
 
+// ✍️ TYPING INDICATOR
+if (data.type === "typing") {
+  const indicator = document.getElementById("typing-indicator");
+  if (!indicator) return;
+
+  if (data.status === "start") {
+    indicator.style.display = "block";
+  } else {
+    indicator.style.display = "none";
+  }
+  return;
+}
+
+
 
   if (data.message_type === "document") {
   const box = document.createElement("div");

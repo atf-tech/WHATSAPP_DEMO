@@ -78,6 +78,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "message_id": event["message_id"],
             "status": event["status"],
         }))
+    
+    async def typing(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "typing",
+            "status": event["status"],  # "start" or "stop"
+        }))
+
 
     # ---------------- SAFE ORM ----------------
 
