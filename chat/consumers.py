@@ -62,7 +62,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "conversation_id": event["conversation_id"],
             "preview": event.get("preview"),
             "unread": event.get("unread", 0),
+
+            # 🔔 ADD THIS LINE
+            "notify": event.get("notify", False),
         }))
+
 
     async def reaction_event(self, event):
         await self.send(text_data=json.dumps({

@@ -1,4 +1,6 @@
 {% extends "chat/base.html" %}
+{% load static %}
+
 {% block content %}
 
 <style>
@@ -93,6 +95,7 @@
 
 </div>
 
+
 <script>
 (function () {
   // 🔒 Prevent script from running multiple times
@@ -118,9 +121,8 @@
     socket = new WebSocket(wsUrl);
 
     socket.onmessage = function (e) {
-  const data = JSON.parse(e.data);
+  const data = JSON.parse(e.data);  
 
-// 🔥 INBOX UPDATE (preview + unread + move to top)
 if (data.type === "inbox_update") {
   const inbox = document.getElementById("inbox-list");
   if (!inbox) return;
@@ -130,15 +132,14 @@ if (data.type === "inbox_update") {
   );
   if (!item) return;
 
-  // 1️⃣ Update preview text
+  // 1️⃣ Update preview
   const preview = item.querySelector(".preview");
   if (preview && data.preview) {
     preview.textContent = data.preview;
   }
 
-  // 2️⃣ Handle unread badge
+  // 2️⃣ Unread badge
   let badge = item.querySelector(".unread-badge");
-
   if (data.unread > 0) {
     if (!badge) {
       badge = document.createElement("span");
@@ -160,11 +161,29 @@ if (data.type === "inbox_update") {
     badge.style.display = "none";
   }
 
-  // 3️⃣ Move conversation to TOP
+  // 3️⃣ Move to top
   inbox.insertBefore(item, inbox.firstChild);
+
+  // 🔔 REAL-TIME NOTIFICATION (ONLY IF NOT IN SAME CHAT)
+if (
+  data.notify === true &&
+  document.hidden &&
+  String(data.conversation_id) !== String(activeConversationId)
+) {
+  notifyAudio.currentTime = 0;
+notifyAudio.play().catch(() => {});
+
+
+  showBrowserNotification(
+    "New WhatsApp message",
+    data.preview || "New message received"
+  );
+}
+
 
   return;
 }
+
 
 
   // 🔥 REACTION FIRST
@@ -342,6 +361,23 @@ msg.appendChild(trigger);
 });
 
 })();
-</script>
+</script><script>
+const notifyAudio = new Audio("{% static 'sounds/notify.mp3' %}");
+notifyAudio.volume = 0.7;
 
+// Ask permission once
+if ("Notification" in window && Notification.permission === "default") {
+  Notification.requestPermission();
+}
+
+function showBrowserNotification(title, body) {
+  if (!("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+
+  new Notification(title, {
+    body: body,
+    icon: "/static/img/whatsapp.png"
+  });
+}
+</script>
 {% endblock %}
