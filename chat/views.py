@@ -1,3 +1,4 @@
+import os
 from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -11,6 +12,7 @@ from django.utils import timezone
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
+from chat.utils import convert_webm_to_ogg
 from whatsapp.services import send_whatsapp_message
 from chat.models import Conversation, Message
 
@@ -19,6 +21,7 @@ from asgiref.sync import async_to_sync
 
 from .models import Conversation, Message, MessageMedia, MessageReaction
 from whatsapp.services import upload_media_to_whatsapp, send_whatsapp_media_message
+from django.core.files import File
 
 
 @login_required
@@ -144,12 +147,7 @@ def send_message(request, convo_id):
 @login_required
 def send_media_message(request, convo_id):
     rm = request.user.rm
-
-    conversation = get_object_or_404(
-        Conversation,
-        id=convo_id,
-        rm=rm
-    )
+    conversation = get_object_or_404(Conversation, id=convo_id, rm=rm)
 
     uploaded = request.FILES.get("file")
     message_type = request.POST.get("message_type")
@@ -157,6 +155,7 @@ def send_media_message(request, convo_id):
     if not uploaded or message_type not in ["image", "video", "audio", "document"]:
         return HttpResponse(status=400)
 
+    # 1️⃣ Save message
     message = Message.objects.create(
         conversation=conversation,
         direction="out",
@@ -173,6 +172,7 @@ def send_media_message(request, convo_id):
 
     channel_layer = get_channel_layer()
 
+    # 2️⃣ 🔥 CHAT UPDATE IMMEDIATELY (NO WAIT)
     async_to_sync(channel_layer.group_send)(
         f"chat_{conversation.id}",
         {
@@ -187,22 +187,29 @@ def send_media_message(request, convo_id):
         }
     )
 
+    # 3️⃣ 🔥 Inbox update immediately
     async_to_sync(channel_layer.group_send)(
         f"inbox_rm_{rm.id}",
         {
             "type": "inbox_update",
             "conversation_id": conversation.id,
-            "preview": "📎 Media",
+            "preview": "🎤 Voice message" if message_type == "audio" else "📎 Media",
             "unread": conversation.unread_count,
         }
     )
 
-
+    # 4️⃣ ⏳ WhatsApp upload (can be slow — UI already updated)
     try:
-        wa_media_id = upload_media_to_whatsapp(
-            media.file.path,
-            media.mime_type
-        )
+        file_path = media.file.path
+        mime_type = media.mime_type
+
+        if message_type == "audio" and mime_type == "audio/webm":
+            ogg_path = convert_webm_to_ogg(uploaded)
+            file_path = ogg_path
+            mime_type = "audio/ogg"
+
+        wa_media_id = upload_media_to_whatsapp(file_path, mime_type)
+
         media.wa_media_id = wa_media_id
         media.save(update_fields=["wa_media_id"])
 
@@ -211,10 +218,12 @@ def send_media_message(request, convo_id):
             wa_media_id,
             message_type
         )
+
         message.external_id = res["messages"][0]["id"]
         message.save(update_fields=["external_id"])
+
     except Exception as e:
-        print("Media send failed:", e)
+        print("WhatsApp media send failed:", e)
 
     return HttpResponse(status=204)
 
@@ -252,7 +261,7 @@ def toggle_reaction(request, message_id):
     ).first()
 
     action = "add"
-
+    
     if existing:
         if existing.emoji == emoji:
             existing.delete()

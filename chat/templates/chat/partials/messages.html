@@ -2,58 +2,64 @@
   <div class="msg {{ m.direction }}"
        data-message-id="{{ m.id }}"
        style="
-        max-width: 70%;
-        padding: 8px 10px;
-        margin-bottom: 8px;
-        border-radius: 8px;
-        background: {% if m.direction == 'out' %}#dcf8c6{% else %}#fff{% endif %};
-        margin-left: {% if m.direction == 'out' %}auto{% else %}0{% endif %};
-        box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        max-width:70%;
+        padding:8px 10px;
+        margin-bottom:8px;
+        border-radius:8px;
+        background:{% if m.direction == 'out' %}#dcf8c6{% else %}#fff{% endif %};
+        margin-left:{% if m.direction == 'out' %}auto{% else %}0{% endif %};
+        box-shadow:0 1px 1px rgba(0,0,0,0.1);
        ">
 
     {% if m.message_type == "text" %}
       <div>{{ m.body }}</div>
+
     {% elif m.message_type == "image" %}
       <img src="{{ m.media.file.url }}"
            style="max-width:220px;border-radius:6px;cursor:pointer"
            onclick="window.open(this.src,'_blank')">
+
     {% elif m.message_type == "video" %}
-      <video src="{{ m.media.file.url }}" controls style="max-width:240px"></video>
+      <video src="{{ m.media.file.url }}"
+             controls
+             style="max-width:240px;border-radius:6px;"></video>
+
     {% elif m.message_type == "audio" %}
-      <audio src="{{ m.media.file.url }}" controls style="width:220px"></audio>
+      <audio controls preload="metadata" style="width:220px">
+        <source src="{{ m.media.file.url }}"
+                type="{{ m.media.mime_type|default:'audio/webm' }}">
+        Your browser does not support audio playback.
+      </audio>
+
     {% else %}
-      <a href="{{ m.media.file.url }}" target="_blank">📄 Download file</a>
+      <a href="{{ m.media.file.url }}" target="_blank">
+        📄 Download file
+      </a>
     {% endif %}
 
-    <!-- Reaction display (hidden if no reaction) -->
-<div class="reaction-bar"
-     data-message-id="{{ m.id }}"
-     style="
-       font-size:14px;
-       margin-top:4px;
-       display:{% if m.reactions.first %}inline-flex{% else %}none{% endif %};
-       gap:4px;
-     ">
-  {% if m.reactions.first %}
-    <span>{{ m.reactions.first.emoji }}</span>
-  {% endif %}
-</div>
+    <!-- Reaction display -->
+    <div class="reaction-bar"
+         data-message-id="{{ m.id }}"
+         style="
+           font-size:14px;
+           margin-top:4px;
+           display:{% if m.reactions.first %}inline-flex{% else %}none{% endif %};
+           gap:4px;
+         ">
+      {% if m.reactions.first %}
+        <span>{{ m.reactions.first.emoji }}</span>
+      {% endif %}
+    </div>
 
-<!-- Reaction trigger (arrow) -->
-<button class="reaction-trigger"
-        data-message-id="{{ m.id }}"
-        style="
-          background:none;
-          border:none;
-          cursor:pointer;
-          font-size:12px;
-          opacity:0.6;
-        ">
-  ⌄
-</button>
-
-
-    <div style="font-size:11px;color:#666;text-align:right;display:flex;gap:4px;justify-content:flex-end;">
+    <!-- Timestamp + ticks -->
+    <div style="
+      font-size:11px;
+      color:#666;
+      text-align:right;
+      display:flex;
+      gap:4px;
+      justify-content:flex-end;
+    ">
       <span>{{ m.created_at|date:"g:i A" }}</span>
       {% if m.direction == "out" %}
         <span class="tick tick-{{ m.status }}"></span>

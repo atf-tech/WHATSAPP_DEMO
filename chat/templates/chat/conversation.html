@@ -175,6 +175,17 @@
     style="font-size:20px;background:none;border:none;cursor:pointer;">
     😊
   </button>
+  <button type="button" id="record-btn"
+  style="font-size:20px;background:none;border:none;cursor:pointer;">
+  🎙️
+</button>
+
+<button type="button" id="stop-btn" style="display:none;">
+  ⏹️
+</button>
+
+<audio id="voice-preview" controls style="display:none; max-width:200px;"></audio>
+
 
   <input type="text" id="text-input" name="text" placeholder="Type a message..." required style="flex:1;">
 
@@ -298,5 +309,80 @@ fetch(`/chat/messages/${messageId}/react/`, {
     body: `emoji=${encodeURIComponent(emoji)}`
   });
 }
+</script>
 
+<script>
+let mediaRecorder = null;
+let audioChunks = [];
+let isSending = false;
+
+const recordBtn = document.getElementById("record-btn");
+const stopBtn   = document.getElementById("stop-btn");
+
+if (recordBtn) {
+  recordBtn.onclick = async () => {
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    audioChunks = [];
+    isSending = false;
+
+    mediaRecorder = new MediaRecorder(stream, {
+      mimeType: "audio/webm;codecs=opus"
+    });
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) {
+        audioChunks.push(e.data);
+      }
+    };
+
+    mediaRecorder.onstop = () => {
+      // 🔐 GUARD → prevent duplicate send
+      if (isSending) return;
+      isSending = true;
+
+      const blob = new Blob(audioChunks, { type: "audio/webm" });
+
+      sendRecordedAudio(blob);
+
+      // 🧹 stop mic access
+      stream.getTracks().forEach(track => track.stop());
+    };
+
+    mediaRecorder.start();
+
+    recordBtn.style.display = "none";
+    stopBtn.style.display = "inline";
+  };
+}
+
+if (stopBtn) {
+  stopBtn.onclick = () => {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+
+    recordBtn.style.display = "inline";
+    stopBtn.style.display = "none";
+  };
+}
+</script>
+
+<script>
+function sendRecordedAudio(blob) {
+  const formData = new FormData();
+  formData.append("file", blob, "voice.webm");
+  formData.append("message_type", "audio");
+
+  fetch("{% url 'send-media-message' conversation.id %}", {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
+    },
+    body: formData
+  }).catch(err => {
+    console.error("Voice send failed", err);
+  });
+}
 </script>
