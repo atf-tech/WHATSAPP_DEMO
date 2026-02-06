@@ -41,20 +41,28 @@ def upload_media_to_whatsapp(file_path, mime_type):
 
 
 def send_whatsapp_media_message(to, media_id, media_type, caption=None):
-
     url = f"https://graph.facebook.com/v18.0/{settings.WA_PHONE_NUMBER_ID}/messages"
 
     payload = {
         "messaging_product": "whatsapp",
         "to": to,
         "type": media_type,
-        media_type: {
-            "id": media_id
-        }
     }
 
-    if caption and media_type in ["image", "video", "document"]:
-        payload[media_type]["caption"] = caption
+    if media_type == "audio":
+        # 🔥 REQUIRED FOR VOICE NOTES
+        payload["audio"] = {
+            "id": media_id,
+            "voice": True
+        }
+
+    else:
+        payload[media_type] = {
+            "id": media_id
+        }
+
+        if caption and media_type in ["image", "video", "document"]:
+            payload[media_type]["caption"] = caption
 
     res = requests.post(url, json=payload, headers=HEADERS, timeout=10)
     res.raise_for_status()
