@@ -50,7 +50,7 @@ def send_whatsapp_media_message(to, media_id, media_type, caption=None):
     }
 
     if media_type == "audio":
-        # 🔥 REQUIRED FOR VOICE NOTES
+        print("MEDIA TYPE:", media_type)
         payload["audio"] = {
             "id": media_id,
             "voice": True

@@ -204,9 +204,13 @@ def send_media_message(request, convo_id):
         mime_type = media.mime_type
 
         if message_type == "audio" and mime_type == "audio/webm":
-            ogg_path = convert_webm_to_ogg(uploaded)
+            webm_path, ogg_path = convert_webm_to_ogg(media.file)
+
             file_path = ogg_path
             mime_type = "audio/ogg"
+            print("Uploading:", file_path, mime_type)
+
+
 
         wa_media_id = upload_media_to_whatsapp(file_path, mime_type)
 
