@@ -251,138 +251,79 @@
   }
 </script>
 
-
-
 <script>
-window.REACTION_EMOJIS = window.REACTION_EMOJIS || [
-  "👍","❤️","😂","😮","😢","😡"
-];
-// let activeMessageId = null;
+(function () {
+  // 🔒 Prevent HTMX re-execution
+  if (window.__voiceRecorderInit) return;
+  window.__voiceRecorderInit = true;
 
-window.activeMessageId = window.activeMessageId || null;
+  window.mediaRecorder = null;
+  window.audioChunks = [];
+  window.isSending = false;
 
-document.addEventListener("click", function (e) {
+  const recordBtn = document.getElementById("record-btn");
+  const stopBtn   = document.getElementById("stop-btn");
 
-  // Arrow clicked
-  if (e.target.classList.contains("reaction-trigger")) {
-    activeMessageId = e.target.dataset.messageId;
+  if (!recordBtn || !stopBtn) return;
 
-    const picker = document.getElementById("reaction-picker");
-    picker.innerHTML = "";
-
-    REACTION_EMOJIS.forEach(emoji => {
-      const span = document.createElement("span");
-      span.textContent = emoji;
-      span.style.fontSize = "18px";
-      span.style.cursor = "pointer";
-      span.style.margin = "4px";
-
-      span.onclick = () => {
-        sendReaction(activeMessageId, emoji);
-        picker.style.display = "none";
-      };
-
-      picker.appendChild(span);
-    });
-
-    const rect = e.target.getBoundingClientRect();
-    picker.style.left = rect.left + "px";
-    picker.style.top = (rect.top - 40) + "px";
-    picker.style.display = "block";
-  }
-
-  // Click outside → close picker
-  else if (!e.target.closest("#reaction-picker")) {
-    const picker = document.getElementById("reaction-picker");
-    if (picker) picker.style.display = "none";
-  }
-});
-
-function sendReaction(messageId, emoji) {
-fetch(`/chat/messages/${messageId}/react/`, {
-    method: "POST",
-    credentials: "same-origin",   
-    headers: {
-      "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value,
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: `emoji=${encodeURIComponent(emoji)}`
-  });
-}
-</script>
-
-<script>
-let mediaRecorder = null;
-let audioChunks = [];
-let isSending = false;
-
-const recordBtn = document.getElementById("record-btn");
-const stopBtn   = document.getElementById("stop-btn");
-
-if (recordBtn) {
   recordBtn.onclick = async () => {
-
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-    audioChunks = [];
-    isSending = false;
+    window.audioChunks = [];
+    window.isSending = false;
 
-    mediaRecorder = new MediaRecorder(stream, {
+    window.mediaRecorder = new MediaRecorder(stream, {
       mimeType: "audio/webm;codecs=opus"
     });
 
     mediaRecorder.ondataavailable = (e) => {
       if (e.data && e.data.size > 0) {
-        audioChunks.push(e.data);
+        window.audioChunks.push(e.data);
       }
     };
 
     mediaRecorder.onstop = () => {
-      // 🔐 GUARD → prevent duplicate send
-      if (isSending) return;
-      isSending = true;
+      if (window.isSending) return;
+      window.isSending = true;
 
-      const blob = new Blob(audioChunks, { type: "audio/webm" });
+      const blob = new Blob(window.audioChunks, {
+        type: "audio/webm"
+      });
 
       sendRecordedAudio(blob);
 
-      // 🧹 stop mic access
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach(t => t.stop());
     };
 
     mediaRecorder.start();
-
     recordBtn.style.display = "none";
     stopBtn.style.display = "inline";
   };
-}
 
-if (stopBtn) {
   stopBtn.onclick = () => {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.stop();
     }
-
     recordBtn.style.display = "inline";
     stopBtn.style.display = "none";
   };
-}
-</script>
 
-<script>
-function sendRecordedAudio(blob) {
-  const formData = new FormData();
-  formData.append("file", blob, "voice.webm");
-  formData.append("message_type", "audio");
+  window.sendRecordedAudio = function (blob) {
+    const formData = new FormData();
+    formData.append("file", blob, "voice.webm");
+    formData.append("message_type", "audio");
 
-  fetch("{% url 'send-media-message' conversation.id %}", {
-    method: "POST",
-    headers: {
-      "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
-    },
-    body: formData
-  }).catch(err => {
-    console.error("Voice send failed", err);
-  });
-}
+    fetch("{% url 'send-media-message' conversation.id %}", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": document.querySelector(
+          "[name=csrfmiddlewaretoken]"
+        ).value
+      },
+      body: formData
+    }).catch(err => {
+      console.error("Voice send failed", err);
+    });
+  };
+})();
 </script>

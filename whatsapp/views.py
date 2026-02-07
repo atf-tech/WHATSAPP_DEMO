@@ -270,9 +270,12 @@ def webhook(request):
             "preview": (
                 message.body
                 if message.message_type == "text"
+                else "🎤 Voice message"
+                if message.message_type == "audio"
                 else "📎 Media"
             ),
             "unread": conversation.unread_count,
+            "notify": True, 
         }
     )
 
