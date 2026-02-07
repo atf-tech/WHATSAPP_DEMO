@@ -16,6 +16,7 @@ from asgiref.sync import async_to_sync
 
 from accounts.models import RM
 from chat.models import Donor, Conversation, Message, MessageMedia
+from chat.views import send_push_to_rm
 
 
 VERIFY_TOKEN = settings.VERIFY_TOKEN
@@ -278,6 +279,18 @@ def webhook(request):
             "notify": True, 
         }
     )
+    
+
+    preview_text = (
+        message.body
+        if message.message_type == "text"
+        else "🎤 Voice message"
+        if message.message_type == "audio"
+        else "📎 Media"
+    )
+
+    send_push_to_rm(conversation, preview_text)
+
 
 
 

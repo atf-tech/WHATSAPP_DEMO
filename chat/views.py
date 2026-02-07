@@ -1,3 +1,4 @@
+import json
 import os
 from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -293,3 +294,43 @@ def toggle_reaction(request, message_id):
     )
 
     return JsonResponse({"ok": True})
+
+
+import json
+from pywebpush import webpush
+from django.conf import settings
+from accounts.models import PushSubscription
+
+
+def send_push_to_rm(conversation, preview):
+    """
+    Sends push notification to RM.
+    Works even if RM is logged out.
+    """
+    subs = PushSubscription.objects.filter(
+        rm=conversation.rm,
+        is_active=True
+    )
+
+    for sub in subs:
+        try:
+            webpush(
+                subscription_info={
+                    "endpoint": sub.endpoint,
+                    "keys": {
+                        "p256dh": sub.p256dh,
+                        "auth": sub.auth,
+                    }
+                },
+                data=json.dumps({
+                    "title": "New WhatsApp Message",
+                    "body": preview,
+                    "conversation_id": conversation.id,
+                }),
+                vapid_private_key=settings.VAPID_PRIVATE_KEY,
+                vapid_claims=settings.VAPID_CLAIMS,
+            )
+
+        except Exception:
+            sub.is_active = False
+            sub.save(update_fields=["is_active"])

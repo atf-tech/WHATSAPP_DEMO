@@ -12,3 +12,24 @@ class RM(models.Model):
 
     def __str__(self):
         return self.name
+
+
+
+class PushSubscription(models.Model):
+    rm = models.ForeignKey(
+        RM,
+        on_delete=models.CASCADE,
+        related_name="push_subscriptions"
+    )
+
+    # ✅ FIX: Text → CharField
+    endpoint = models.CharField(max_length=512, unique=True)
+
+    p256dh = models.CharField(max_length=255)
+    auth = models.CharField(max_length=255)
+
+    user_agent = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"PushSub for {self.rm.name}"
