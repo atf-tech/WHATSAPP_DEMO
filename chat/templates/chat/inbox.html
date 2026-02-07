@@ -383,7 +383,7 @@ function showBrowserNotification(title, body) {
 
 <script>
 if ("serviceWorker" in navigator && "PushManager" in window) {
-  navigator.serviceWorker.register("/static/service-worker.js").then(async reg => {
+  navigator.serviceWorker.register("/service-worker.js").then(async reg => {
 
     const existingSub = await reg.pushManager.getSubscription();
     if (existingSub) {
