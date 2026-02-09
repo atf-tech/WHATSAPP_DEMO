@@ -34,12 +34,7 @@ VERIFY_TOKEN="demo_verify_token"
 WA_APP_SECRET="030532e25b864ff4f176abda2dc1cb9f"
 
 
-VAPID_PUBLIC_KEY= "BAgigkbDbAVzRbfyydBJuSzUUEGMdIyiZmlXaULmocqw4VQCObx4tuObcD1hl2dTqouI007uf8BWncVIgPTB2Y8"
-VAPID_PRIVATE_KEY= "Ckzc4cCNDkBw4zj39YLa2ck5UUlkxPe71dAmnE9EGqA"
-VAPID_CLAIMS = {
-    "sub": "https://stafngo.org"
-}
-
+ 
 
 
 # Application definition

@@ -186,7 +186,7 @@ notifyAudio.play().catch(() => {});
 
 
 
-  // 🔥 REACTION FIRST
+  /* 🔥 REACTION FIRST
   if (data.type === "reaction") {
     const bar = document.querySelector(
       `.reaction-bar[data-message-id="${data.message_id}"]`
@@ -202,7 +202,7 @@ notifyAudio.play().catch(() => {});
     }
     return;
   }
-
+*/
 
   if (data.type === "message_status") {
     const tickEl = document.querySelector(
@@ -232,8 +232,7 @@ notifyAudio.play().catch(() => {});
 
 
 
-
-  if (data.message_type === "image") {
+if (data.message_type === "image") {
   const link = document.createElement("a");
   link.href = data.file_url;
   link.target = "_blank";
@@ -242,10 +241,13 @@ notifyAudio.play().catch(() => {});
   img.src = data.file_url;
   img.className = "chat-image";
 
+  img.onload = () => {
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  };
+
   link.appendChild(img);
   msg.appendChild(link);
 }
-
 
   if (data.message_type === "audio") {
   const audio = document.createElement("audio");
@@ -263,7 +265,7 @@ notifyAudio.play().catch(() => {});
   msg.appendChild(video);
 }
 
-// ✍️ TYPING INDICATOR
+/* ✍️ TYPING INDICATOR
 if (data.type === "typing") {
   const indicator = document.getElementById("typing-indicator");
   if (!indicator) return;
@@ -276,7 +278,7 @@ if (data.type === "typing") {
   return;
 }
 
-
+*/
 
   if (data.message_type === "document") {
   const box = document.createElement("div");
@@ -291,7 +293,7 @@ if (data.type === "typing") {
   msg.appendChild(box);
 }
 
-// 🔥 Reaction bar (initially hidden)
+/*// 🔥 Reaction bar (initially hidden)
 const reactionBar = document.createElement("div");
 reactionBar.className = "reaction-bar";
 reactionBar.dataset.messageId = data.id;
@@ -300,7 +302,7 @@ reactionBar.style.fontSize = "14px";
 reactionBar.style.marginTop = "4px";
 msg.appendChild(reactionBar);
 
-// 🔥 Reaction trigger
+// 🔥 Reaction trigger 
 const trigger = document.createElement("button");
 trigger.className = "reaction-trigger";
 trigger.dataset.messageId = data.id;
@@ -310,7 +312,7 @@ trigger.style.border = "none";
 trigger.style.cursor = "pointer";
 trigger.style.fontSize = "12px";
 trigger.style.opacity = "0.6";
-msg.appendChild(trigger);
+msg.appendChild(trigger);*/
 
 
 
@@ -380,40 +382,4 @@ function showBrowserNotification(title, body) {
   });
 }
 </script>
-
-<script>
-if ("serviceWorker" in navigator && "PushManager" in window) {
-  navigator.serviceWorker.register("/service-worker.js").then(async reg => {
-
-    const existingSub = await reg.pushManager.getSubscription();
-    if (existingSub) {
-      return; // already subscribed
-    }
-
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") return;
-
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: "{{ VAPID_PUBLIC_KEY }}"
-    });
-
-    await fetch("{% url 'push_subscribe' %}", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        subscription: sub
-      })
-    });
-
-  }).catch(err => {
-    console.warn("Push init failed", err);
-  });
-}
-</script>
-
-
-
 {% endblock %}
