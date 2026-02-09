@@ -17,7 +17,6 @@ urlpatterns = [
     name="send-media-message"),
 
     path("send/<int:convo_id>/", views.send_message, name="send-message"),
-    path("messages/<int:message_id>/react/", views.toggle_reaction, name="toggle-reaction")
 
 
 ]

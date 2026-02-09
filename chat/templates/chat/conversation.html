@@ -112,37 +112,12 @@
      data-conversation-id="{{ conversation.id }}"
      style="position: relative;">
 
-     <div id="typing-indicator"
-     style="
-       display:none;
-       padding:6px 12px;
-       font-size:13px;
-       color:#666;
-       font-style:italic;
-     ">
-  Donor is typing…
-    </div>
 
 
   <!-- MESSAGES -->
   <div class="messages" id="messages">
     {% include "chat/partials/messages.html" %}
   </div>
-
-  <div id="reaction-picker"
-     style="
-       display:none;
-       position:fixed;
-       background:white;
-       border:1px solid #ccc;
-       padding:6px;
-       border-radius:6px;
-       box-shadow:0 2px 6px rgba(0,0,0,.2);
-       z-index:2000;
-     ">
-    
-  </div>
-
 
   <!-- EMOJI PICKER (TEXT INPUT) -->
   <div id="emoji-picker"

@@ -19,7 +19,7 @@ from chat.models import Conversation, Message
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
-from .models import Conversation, Message, MessageMedia, MessageReaction
+from .models import Conversation, Message, MessageMedia
 from whatsapp.services import upload_media_to_whatsapp, send_whatsapp_media_message
 from django.core.files import File
 
@@ -253,46 +253,3 @@ def messages_partial(request, convo_id):
 
 
 
-
-@require_POST
-@login_required
-def toggle_reaction(request, message_id):
-    rm = request.user.rm
-    emoji = request.POST.get("emoji")
-    message = get_object_or_404(Message, id=message_id)
-
-
-    existing = MessageReaction.objects.filter(
-        message=message,
-        rm=rm
-    ).first()
-
-    action = "add"
-    
-    if existing:
-        if existing.emoji == emoji:
-            existing.delete()
-            action = "remove"
-        else:
-            existing.emoji = emoji
-            existing.save(update_fields=["emoji"])
-            action = "update"
-    else:
-        MessageReaction.objects.create(
-            message=message,
-            rm=rm,
-            emoji=emoji
-        )
-
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-        f"chat_{message.conversation_id}",
-        {
-            "type": "reaction_event",
-            "message_id": message.id,
-            "emoji": emoji,
-            "action": action,
-        }
-    )
-
-    return JsonResponse({"ok": True})

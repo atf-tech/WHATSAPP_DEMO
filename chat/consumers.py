@@ -51,7 +51,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
         await self.set_conversation_active(False)
 
-    # ---------------- EVENTS ----------------
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps(event["message"]))
@@ -68,13 +67,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         }))
 
 
-    # async def reaction_event(self, event):
-    #     await self.send(text_data=json.dumps({
-    #         "type": "reaction",
-    #         "message_id": event["message_id"],
-    #         "emoji": event["emoji"],
-    #         "action": event["action"],
-    #     }))
+    
 
     async def message_status(self, event):
         await self.send(text_data=json.dumps({
@@ -83,14 +76,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "status": event["status"],
         }))
     
-    # async def typing(self, event):
-    #     await self.send(text_data=json.dumps({
-    #         "type": "typing",
-    #         "status": event["status"],  # "start" or "stop"
-    #     }))
+    
 
 
-    # ---------------- SAFE ORM ----------------
 
     @database_sync_to_async
     def get_rm_id(self, user):

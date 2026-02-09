@@ -122,7 +122,6 @@
 
     socket.onmessage = function (e) {
   const data = JSON.parse(e.data);  
-
 if (data.type === "inbox_update") {
   const inbox = document.getElementById("inbox-list");
   if (!inbox) return;
@@ -164,45 +163,32 @@ if (data.type === "inbox_update") {
   // 3️⃣ Move to top
   inbox.insertBefore(item, inbox.firstChild);
 
-  // 🔔 REAL-TIME NOTIFICATION (ONLY IF NOT IN SAME CHAT)
-if (
-  data.notify === true &&
-  document.hidden &&
-  String(data.conversation_id) !== String(activeConversationId)
-) {
-  notifyAudio.currentTime = 0;
-notifyAudio.play().catch(() => {});
+  // 🔔 Notification logic
+  if (
+    data.notify === true &&
+    String(data.conversation_id) !== String(activeConversationId)
+  ) {
+    // 🔊 Always play sound
+    notifyAudio.currentTime = 0;
+    notifyAudio.play().catch(() => {});
 
+    // 🔔 Browser notification only if tab hidden
+    if (document.hidden) {
+      showBrowserNotification(
+        "New WhatsApp message",
+        data.preview || "New message received"
+      );
+    }
+  }
 
-  showBrowserNotification(
-    "New WhatsApp message",
-    data.preview || "New message received"
-  );
-}
-
-
+  // ✅ ALWAYS stop here for inbox updates
   return;
 }
 
 
 
-  /* 🔥 REACTION FIRST
-  if (data.type === "reaction") {
-    const bar = document.querySelector(
-      `.reaction-bar[data-message-id="${data.message_id}"]`
-    );
-    if (!bar) return;
 
-    if (data.action === "remove") {
-      bar.style.display = "none";
-      bar.innerHTML = "";
-    } else {
-      bar.style.display = "inline-flex";
-      bar.innerHTML = `<span>${data.emoji}</span>`;
-    }
-    return;
-  }
-*/
+
 
   if (data.type === "message_status") {
     const tickEl = document.querySelector(
@@ -265,20 +251,7 @@ if (data.message_type === "image") {
   msg.appendChild(video);
 }
 
-/* ✍️ TYPING INDICATOR
-if (data.type === "typing") {
-  const indicator = document.getElementById("typing-indicator");
-  if (!indicator) return;
 
-  if (data.status === "start") {
-    indicator.style.display = "block";
-  } else {
-    indicator.style.display = "none";
-  }
-  return;
-}
-
-*/
 
   if (data.message_type === "document") {
   const box = document.createElement("div");
@@ -292,28 +265,6 @@ if (data.type === "typing") {
   box.appendChild(link);
   msg.appendChild(box);
 }
-
-/*// 🔥 Reaction bar (initially hidden)
-const reactionBar = document.createElement("div");
-reactionBar.className = "reaction-bar";
-reactionBar.dataset.messageId = data.id;
-reactionBar.style.display = "none";
-reactionBar.style.fontSize = "14px";
-reactionBar.style.marginTop = "4px";
-msg.appendChild(reactionBar);
-
-// 🔥 Reaction trigger 
-const trigger = document.createElement("button");
-trigger.className = "reaction-trigger";
-trigger.dataset.messageId = data.id;
-trigger.textContent = "⌄";
-trigger.style.background = "none";
-trigger.style.border = "none";
-trigger.style.cursor = "pointer";
-trigger.style.fontSize = "12px";
-trigger.style.opacity = "0.6";
-msg.appendChild(trigger);*/
-
 
 
   // ==========================
