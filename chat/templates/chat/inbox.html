@@ -122,74 +122,9 @@
 
     socket.onmessage = function (e) {
   const data = JSON.parse(e.data);  
-if (data.type === "inbox_update") {
-  const inbox = document.getElementById("inbox-list");
-  if (!inbox) return;
-
-  const item = inbox.querySelector(
-    `.chat-item[data-conversation-id="${data.conversation_id}"]`
-  );
-  if (!item) return;
-
-  // 1️⃣ Update preview
-  const preview = item.querySelector(".preview");
-  if (preview && data.preview) {
-    preview.textContent = data.preview;
-  }
-
-  // 2️⃣ Unread badge
-  let badge = item.querySelector(".unread-badge");
-  if (data.unread > 0) {
-    if (!badge) {
-      badge = document.createElement("span");
-      badge.className = "unread-badge";
-      badge.style.cssText = `
-        background:#25d366;
-        color:white;
-        font-size:12px;
-        padding:2px 6px;
-        border-radius:12px;
-        margin-left:6px;
-        float:right;
-      `;
-      item.appendChild(badge);
-    }
-    badge.textContent = data.unread;
-    badge.style.display = "inline-block";
-  } else if (badge) {
-    badge.style.display = "none";
-  }
-
-  // 3️⃣ Move to top
-  inbox.insertBefore(item, inbox.firstChild);
-
-  // 🔔 Notification logic
-  if (
-    data.notify === true &&
-    String(data.conversation_id) !== String(activeConversationId)
-  ) {
-    // 🔊 Always play sound
-    notifyAudio.currentTime = 0;
-    notifyAudio.play().catch(() => {});
-
-    // 🔔 Browser notification only if tab hidden
-    if (document.hidden) {
-      showBrowserNotification(
-        "New WhatsApp message",
-        data.preview || "New message received"
-      );
-    }
-  }
-
-  // ✅ ALWAYS stop here for inbox updates
-  return;
-}
 
 
-
-
-
-
+   
   if (data.type === "message_status") {
     const tickEl = document.querySelector(
       `[data-message-id="${data.message_id}"] .tick`
@@ -333,4 +268,69 @@ function showBrowserNotification(title, body) {
   });
 }
 </script>
+
+<script>
+(function () {
+  // 🔒 Prevent multiple inbox sockets
+  if (window.__inboxWsInitialized) return;
+  window.__inboxWsInitialized = true;
+
+  const protocol = location.protocol === "https:" ? "wss://" : "ws://";
+  const wsUrl = protocol + window.location.host + "/ws/inbox/";
+
+  const inboxSocket = new WebSocket(wsUrl);
+
+  inboxSocket.onmessage = function (e) {
+    const data = JSON.parse(e.data);
+
+    if (data.type !== "inbox_update") return;
+
+    const inbox = document.getElementById("inbox-list");
+    if (!inbox) return;
+
+    const item = inbox.querySelector(
+      `.chat-item[data-conversation-id="${data.conversation_id}"]`
+    );
+    if (!item) return;
+
+    // 1️⃣ Preview
+    const preview = item.querySelector(".preview");
+    if (preview && data.preview) {
+      preview.textContent = data.preview;
+    }
+
+    // 2️⃣ Unread badge
+    let badge = item.querySelector(".unread-badge");
+    if (data.unread > 0) {
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "unread-badge";
+        badge.style.cssText =
+          "background:#25d366;color:white;font-size:12px;padding:2px 6px;border-radius:12px;";
+        item.appendChild(badge);
+      }
+      badge.textContent = data.unread;
+      badge.style.display = "inline-block";
+    } else if (badge) {
+      badge.style.display = "none";
+    }
+
+    // 3️⃣ Move to top
+    inbox.insertBefore(item, inbox.firstChild);
+
+    // 🔔 Always play sound
+    notifyAudio.currentTime = 0;
+    notifyAudio.play().catch(() => {});
+
+    // 🔔 Browser notification only if tab hidden
+    if (document.hidden) {
+      showBrowserNotification(
+        "New WhatsApp message",
+        data.preview || "New message received"
+      );
+    }
+  };
+})();
+</script>
+
 {% endblock %}
